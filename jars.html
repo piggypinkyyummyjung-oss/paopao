@@ -1,0 +1,49 @@
+const KEY="jars-v2",EM={d:"🐷",f:"🏦",k:"📈",c:"🧸",o:"🍀",i:"🛡️",g:"💰"},TY={d:"รายรับ-รายจ่าย",f:"PVD + สหกรณ์",k:"DCA หุ้น",c:"กองทุนลูก",o:"เงินเหลือ",i:"ประกัน",g:"กระปุกทั่วไป"};
+// ... (โค้ดส่วนที่เหลือเหมือนเดิม)
+const RATES={pvd:5,coop:5,dca:7,child:3};
+let S={salary:0,auto:false,last:"",jars:[]},NT="d",OPEN=0,LC="";
+let LOADERR=false,LASTSAVED="",RAWLOAD="";
+try{const r=window.Android?Android.load():localStorage.getItem(KEY);if(r){LASTSAVED=r;RAWLOAD=r;try{S=Object.assign(S,JSON.parse(r))}catch(e){LOADERR=true;try{localStorage.setItem(KEY+"-bak",r)}catch(_){}}}}catch(e){LOADERR=true}
+
+// 🛑 [ตัดออก] ฟังก์ชัน mergeLeftover ที่สร้างรายการ "ยกมาจากกระปุกเงินเหลือ"
+// function mergeLeftover(){ ... }
+
+function migrate(){
+  // ... (โค้ดส่วนนี้เหมือนเดิม)
+}
+clean();migrate();
+// 🛑 [ตัดออก] การเรียกใช้ mergeLeftover() ตอนเริ่มต้น
+// clean();mergeLeftover();
+
+const $=id=>document.getElementById(id);
+// ... (โค้ดส่วนที่เหลือเหมือนเดิม)
+
+// 🛑 [ตัดออก] การเรียกใช้ mergeLeftover() ในฟังก์ชัน syncNative
+function syncNative(){
+  if(!window.Android)return;
+  try{const r=Android.load();if(r&&r!==LASTSAVED){S=Object.assign({salary:0,auto:false,last:"",jars:[]},JSON.parse(r));LASTSAVED=r;clean();migrate();/* mergeLeftover(); */ clean();V++;render()}}catch(e){report(e)}
+}
+// ... (โค้ดส่วนที่เหลือเหมือนเดิม)
+
+// 🛑 [ตัดออก] การเรียกใช้ mergeLeftover() ในฟังก์ชันนำเข้าข้อมูล
+function stageImport(text){
+  // ...
+      S=Object.assign({salary:0,auto:false,last:"",jars:[],seeded:true},IMPD.d);IMPD=null;clean();migrate();/* mergeLeftover(); */clean();done();toast("นำเข้าข้อมูลแล้ว")});
+  // ...
+}
+// ... (โค้ดส่วนที่เหลือเหมือนเดิม)
+
+// 🛑 [ตัดออก] การสร้างกระปุกประเภท 'o' (เงินเหลือ) ในค่าเริ่มต้น
+if(!S.jars.length&&!S.seeded){
+  S.seeded=true;const t0=Date.now();
+  S.jars=[
+    {id:t0+1,type:"d",name:"รายรับ-รายจ่าย",end:eom(),rest:true,cb:{},tx:[]},
+    {id:t0+2,type:"f",name:"PVD + สหกรณ์",emp:0,er:0,prate:RATES.pvd,mon:0,srate:RATES.coop,yrs:10,tx:[]},
+    {id:t0+3,type:"k",name:"DCA หุ้น",mon:0,rate:RATES.dca,yrs:10,sym:"",price:0,tx:[]},
+    {id:t0+4,type:"c",name:"กองทุนลูก",mon:0,goal:0,yrs:10,rate:RATES.child,tx:[]},
+    // {id:t0+5,type:"o",name:"เงินเหลือ",tx:[]},  <-- 🛑 [ตัดออก] บรรทัดนี้
+    {id:t0+6,type:"i",name:"ประกัน",pct:0,premium:0,cyc:"y",tx:[]}
+  ];
+}
+
+// ... (โค้ดส่วนที่เหลือเหมือนเดิม)
