@@ -16,9 +16,7 @@ jobs:
           distribution: temurin
           java-version: "17"
       - name: Prepare assets
-        run: |
-          mkdir -p android/app/src/main/assets
-          cp jars.html android/app/src/main/assets/index.html
+        run: mkdir -p android/app/src/main/assets && cp jars.html android/app/src/main/assets/index.html
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
