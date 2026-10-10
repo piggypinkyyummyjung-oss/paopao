@@ -346,6 +346,7 @@ function cend(l){
   x.setDate(x.getDate()-1);
   return ymd(x);
 }
+const eom=()=>cend();
 
 function cm(j){
   const ym=curC(),c=CM.get(j.tx);
@@ -503,31 +504,7 @@ function toast(m){
   _tt=setTimeout(()=>{t.style.display="none"},3500);
 }
 function hideToast(){const t=document.getElementById("toast");if(t)t.style.display="none"}
-function report(e){
-  try{console.error(e)}catch(_){}
-  const msg=e&&e.message?e.message:String(e);
-  let banner=document.getElementById("__errbanner");
-  if(!banner){
-    banner=document.createElement("div");
-    banner.id="__errbanner";
-    banner.style.cssText="position:fixed;top:60px;left:12px;right:12px;background:#c00;color:#fff;padding:12px;border-radius:8px;font-size:12px;z-index:99999;word-break:break-all;max-height:200px;overflow:auto;line-height:1.4";
-    const closeBtn=document.createElement("button");
-    closeBtn.textContent="× ปิด";
-    closeBtn.style.cssText="float:right;background:#fff;color:#c00;border:0;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer";
-    closeBtn.onclick=()=>banner.remove();
-    banner.append(closeBtn);
-    const title=document.createElement("b");
-    title.textContent="Error:";
-    title.style.display="block";
-    title.style.marginBottom="4px";
-    banner.append(title);
-    document.body.append(banner);
-  }
-  const p=document.createElement("div");
-  p.textContent="• "+msg;
-  p.style.marginTop="4px";
-  banner.append(p);
-  }
+function report(e){try{console.error(e)}catch(_){}}
 function safe(f){try{f()}catch(e){report(e)}}
 
 function parseNum(raw){
@@ -718,7 +695,6 @@ const autoFund=()=>{
   }
 };
 
-const eom=()=>cend();
 const done=()=>{hideToast();safe(autoFund);V++;store();render();if(UNDO&&UNDO.fresh){UNDO.fresh=0;showUndo()}};
 const AUTON=["สมทบ PVD","ส่งหุ้นสหกรณ์","แบ่งเงินเดือน","ผลตอบแทน","เงินเดือนออก","ผ่อนหนี้"];function pie(items,total,center){
   const NS="http://www.w3.org/2000/svg";
@@ -1134,7 +1110,7 @@ function askAmt(label,isOut,cb){
   document.body.append(dlg);
   dlg.showModal();
   dlg.addEventListener("close",()=>dlg.remove());
-  }function catPanel(g){
+        }function catPanel(g){
   g.append(el("label",null,"หมวดรายจ่าย"));
   const box=el("div","set");
   const list=catsOut();
@@ -1288,6 +1264,33 @@ function addJarDialog(){
   dlg.addEventListener("close",()=>dlg.remove());
 }
 
+function editJarDialog(j){
+  const dlg=document.createElement("dialog");
+  dlg.append(el("h3",null,"✎ แก้ไขกระปุก"));
+  const ni=el("input");ni.value=j.name;
+  const ic=el("div");ic.id="nic";ic.style.marginTop="8px";
+  let curIcon=j.ic||EM[j.type]||"💰";
+  const drawIcons=()=>{ic.innerHTML="";iconPick(ic,curIcon,x=>{curIcon=x;drawIcons()})};
+  drawIcons();
+  const lb1=el("label",null,"ชื่อกระปุก");lb1.style.cssText="font-size:12px;color:var(--mute);display:block;margin:8px 0 4px";
+  const lb2=el("label",null,"ไอคอน");lb2.style.cssText="font-size:12px;color:var(--mute);display:block;margin:12px 0 4px";
+  dlg.append(lb1,ni,lb2,ic);
+  const btns=el("div","btns");
+  btns.append(btn("v","ยกเลิก",()=>dlg.close()),btn("p","บันทึก",()=>{
+    const n=ni.value.trim();
+    if(!n){ni.classList.add("err");toast(FILLMSG);return}
+    j.name=n;
+    j.ic=curIcon;
+    dlg.close();
+    done();
+    toast("บันทึกแล้ว");
+  }));
+  dlg.append(btns);
+  document.body.append(dlg);
+  dlg.showModal();
+  dlg.addEventListener("close",()=>dlg.remove());
+}
+
 function notifPanel(g){
   const d=el("details");d.open=NOPEN;
   d.addEventListener("toggle",()=>{NOPEN=d.open});
@@ -1401,9 +1404,11 @@ function cfgPanel(){
     for(const j of S.jars){
       const li=el("li");
       li.append(el("span","n",(j.ic||EM[j.type]||"💰")+" "+j.name),el("b",null,fmt(bal(j))+" ฿"));
+      const ed=el("button",null,"✎");ed.type="button";
+      ed.onclick=()=>editJarDialog(j);
       const x=el("button",null,"🗑️");x.type="button";
       x.onclick=()=>confirmDel(j);
-      li.append(x);
+      li.append(ed,x);
       jl.append(li);
     }
     if(!S.jars.length)jl.append(el("li",null,"— ยังไม่มีกระปุก —"));
@@ -1545,7 +1550,7 @@ function cfgPanel(){
   }
 
   c.append(g);
-    }const SSLOT=document.createElement("div");SSLOT.id="sslot";
+        }const SSLOT=document.createElement("div");SSLOT.id="sslot";
 let PLO=true,LDO=false,LM=null;
 const YR=()=>S.yrs>0?S.yrs:10;
 
@@ -1907,7 +1912,7 @@ function salary(){
   }));
   if(S.last)g.append(el("div","sub","แบ่งล่าสุดเดือน "+S.last));
   c.append(g,SSLOT);
-                       }function render(){
+}function render(){
   safe(applyTheme);
   safe(salary);
   safe(sumPanel);
