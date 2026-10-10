@@ -128,6 +128,7 @@
   #nic button{aspect-ratio:1;font-size:20px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);cursor:pointer;padding:0}
   #nic button.on{border-color:var(--pri);background:#F5F0FF}
   .pcard{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#FDFAFC;display:flex;flex-direction:column;gap:8px}
+  .prow{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
 </style>
 </head>
 <body>
@@ -193,7 +194,7 @@ function defNotif(){
 clean();migrate();defNotif();
 const $=id=>document.getElementById(id);
 let _st=null;
-const flush=()=>{if(_st){clearTimeout(_st);_st=null}try{const j=JSON.stringify(S);LASTSAVED=j;if(window.Android)Android.save(j);else localStorage.setItem(KEY,j)}catch(e){toast(e&&e.name==="QuotaExceededError"?"พื้นที่จัดเก็บเต็ม กรุณาลบรายการเก่าบางส่วน":"บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")}};
+const flush=()=>{if(_st){clearTimeout(_st);_st=null}try{const j=JSON.stringify(S);LASTSAVED=j;if(window.Android)Android.save(j);else localStorage.setItem(KEY,j)}catch(e){toast(e&&e.name==="QuotaExceededError"?"พื้นที่จัดเก็บเต็ม":"บันทึกไม่สำเร็จ")}};
 const store=()=>{if(_st)clearTimeout(_st);_st=setTimeout(flush,300)};
 addEventListener("pagehide",flush);document.addEventListener("visibilitychange",()=>{if(document.hidden)flush()});
 const pad=n=>String(n).padStart(2,"0");
@@ -288,7 +289,7 @@ const NUMMSG="โปรดระบุเป็นตัวเลขเท่า
 let _tt=null;
 function toast(m){let t=document.getElementById("toast");if(!t){t=document.createElement("div");t.id="toast";t.setAttribute("role","alert");document.body.append(t)}t.textContent=m;t.style.display="block";clearTimeout(_tt);_tt=setTimeout(()=>{t.style.display="none"},3500)}
 function hideToast(){const t=document.getElementById("toast");if(t)t.style.display="none"}
-function report(e){try{console.error(e)}catch(_){}toast("ขออภัย เกิดข้อผิดพลาดบางส่วน ข้อมูลของคุณยังปลอดภัย ลองใหม่อีกครั้ง")}
+function report(e){try{console.error(e)}catch(_){}toast("ขออภัย เกิดข้อผิดพลาดบางส่วน ข้อมูลของคุณยังปลอดภัย")}
 function safe(f){try{f()}catch(e){report(e)}}
 function parseNum(raw){const t=String(raw==null?"":raw).trim();if(!t)return{empty:true};const c=t.replace(/,/g,"");if(!/^(\d+\.?\d*|\.\d+)$/.test(c))return{bad:true};const v=parseFloat(c);return Number.isFinite(v)?{v}:{bad:true}}
 function pn(e){const r=parseNum(e.value);e.classList.toggle("err",!!r.bad);e._why=r.bad?"bad":r.empty?"empty":"";if(r.bad)toast(NUMMSG);return r.v===undefined?NaN:r.v}
@@ -387,7 +388,7 @@ function sumPanel(){
     const b=el("div","st");b.append(el("small",null,l),el("b",cl,fmt(v)+" ฿"),el("i",null,l==="เงินเข้า"?(st.add2>0?"เงินเดือน "+fmt(st.reg)+" + เติมเอง "+fmt(st.add2):"100%"):pc(v,st.inc)+" ของเงินเข้า"));sg.append(b);
   }
   c.append(sg);
-  c.append(el("div","sub","คงเหลือ = เงินเข้า − ค่าใช้จ่าย − เงินออม/ลงทุนตามแผนแบ่งเงินเดือน"));
+  c.append(el("div","sub","คงเหลือ = เงินเข้า − ค่าใช้จ่าย − เงินออม/ลงทุนตามแผน"));
   const tb=el("div","tabs");tb.style.marginTop="12px";
   for(const [k,t] of [["cat","ค่าใช้จ่ายตามหมวด"],["all","ภาพรวมเข้า-ออก"]]){const b=el("button",SPM===k?"on":"",t);b.type="button";b.onclick=()=>{SPM=k;render()};tb.append(b)}
   c.append(tb);
@@ -550,7 +551,7 @@ function stageImport(text){
   try{const o=JSON.parse(text),d=o&&o.data?o.data:o;if(!d||!Array.isArray(d.jars))throw 0;
     IMPD={d,nj:d.jars.length,nt:d.jars.reduce((x,j)=>x+((j&&j.tx)||[]).length,0)};CFO=true;render()}
   catch(e){toast("ไฟล์สำรองไม่ถูกต้อง")}
-  }function catPanel(g){
+                                                                                                           }function catPanel(g){
   const box=el("div","set");
   const list=cats();
   list.forEach((n,i)=>{
@@ -778,66 +779,50 @@ function planPanel(g){
   d.append(el("summary",null,"📐 การแบ่งเงินเดือน"));
   const w=el("div","set");
 
+  const pf=S.jars.find(j=>j.type==="f");
+  if(pf){
+    const card=el("div","pcard");
+    card.append(el("b",null,"🏦 PVD + สหกรณ์"));
+    const addF=(label,key,isPct,ph)=>{
+      card.append(el("label",null,label));
+      const row=el("div","prow");
+      const i=el("input");i.type="text";i.inputMode="decimal";
+      const v=pf[key];i.value=(v!==undefined&&v!==null&&v!==0)?String(v):"";
+      if(ph)i.placeholder=ph;
+      const sb=btn("v","💾",()=>{
+        const r=parseNum(i.value);
+        if(r.bad){i.classList.add("err");toast(NUMMSG);return}
+        if(isPct&&r.v>100){i.classList.add("err");toast("ช่องนี้เป็น % (0–100)");return}
+        pf[key]=r.empty?0:r.v;done();toast("บันทึกแล้ว");
+      });
+      row.append(i,sb);card.append(row);
+    };
+    addF("PVD เราสมทบ (% ของเงินเดือน)","emp",true,"เช่น 12");
+    addF("PVD องค์กรสมทบ (% ของเงินเดือน)","pvdEmp",true,"default 9");
+    addF("ส่งหุ้นสหกรณ์ (บาท/เดือน)","mon",false,"ไม่มีเว้นว่าง");
+    w.append(card);
+  }
+
   for(const j of S.jars){
-    if("fkcgi".indexOf(j.type)<0)continue;
+    if(j.type==="f"||"kcig".indexOf(j.type)<0)continue;
     const card=el("div","pcard");
     card.append(el("b",null,(j.ic||EM[j.type])+" "+j.name));
-    const ins=[];
-    const F=(label,key,pct,ph)=>{
+    const addF=(label,key,ph)=>{
       card.append(el("label",null,label));
+      const row=el("div","prow");
       const i=el("input");i.type="text";i.inputMode="decimal";
-      const v=j[key];i.value=v?String(v):"";
+      const v=j[key];i.value=(v!==undefined&&v!==null&&v!==0)?String(v):"";
       if(ph)i.placeholder=ph;
-      card.append(i);ins.push({key,i,pct});
+      const sb=btn("v","💾",()=>{
+        const r=parseNum(i.value);
+        if(r.bad){i.classList.add("err");toast(NUMMSG);return}
+        j[key]=r.empty?0:r.v;done();toast("บันทึกแล้ว");
+      });
+      row.append(i,sb);card.append(row);
     };
-    if(j.type==="f"){
-      F("PVD ที่เราสมทบ (% ของเงินเดือน)","emp",1,"เช่น 12");
-      F("ส่งหุ้นสหกรณ์ (บาท/เดือน)","mon",0,"ไม่มีเว้นว่าง");
-    }else if(j.type==="k"){F("ลงทุนต่อเดือน (บาท)","mon",0,"เช่น 5000");}
-    else if(j.type==="c"||j.type==="g"){F("ฝากต่อเดือน (บาท)","mon",0,"ไม่มีเว้นว่าง");F("เป้าหมาย (บาท)","goal",0,"ไม่มี");}
-    else if(j.type==="i")F("กันต่อเดือน (บาท/เดือน)","mon",0,"ไม่มีเว้นว่าง");
-
-    card.append(btn("p","💾 บันทึก "+j.name,()=>{
-      const rs=ins.map(x=>({x,r:parseNum(x.i.value)}));
-      const bad=rs.filter(o=>o.r.bad);
-      if(bad.length){bad.forEach(o=>o.x.i.classList.add("err"));toast(NUMMSG);return}
-      const big=rs.find(o=>o.x.pct&&o.r.v>100);
-      if(big){big.x.i.classList.add("err");toast("ช่องนี้เป็น % (0–100)");return}
-      for(const o of rs){const v=o.r.empty?0:o.r.v;j[o.x.key]=v}
-      done();toast("บันทึก "+j.name+" แล้ว");
-    }));
-    w.append(card);
-  }
-
-  {
-    const card=el("div","pcard");
-    card.append(el("b",null,"🏦 PVD องค์กรสมทบ"));
-    card.append(el("label",null,"องค์กรสมทบ (% ของเงินเดือน)"));
-    const pf=S.jars.find(j=>j.type==="f");
-    const pe=el("input");pe.type="text";pe.inputMode="decimal";pe.value=String((pf&&pf.pvdEmp)||RATES.pvdEmp);pe.placeholder="เช่น 9";
-    card.append(pe);
-    card.append(btn("p","💾 บันทึก PVD องค์กร",()=>{
-      const r=parseNum(pe.value);
-      if(r.bad){pe.classList.add("err");toast(NUMMSG);return}
-      if(r.v>100){pe.classList.add("err");toast("ช่องนี้เป็น % (0–100)");return}
-      if(!pf){toast("ไม่พบกระปุก PVD");return}
-      pf.pvdEmp=r.empty?RATES.pvdEmp:r.v;done();toast("บันทึกแล้ว");
-    }));
-    w.append(card);
-  }
-
-  {
-    const card=el("div","pcard");
-    card.append(el("b",null,"⚙️ ทั่วไป"));
-    card.append(el("label",null,"ประมาณการอีกกี่ปี (ไม่กรอก = 10)"));
-    const yi=el("input");yi.type="text";yi.inputMode="decimal";yi.value=S.yrs?String(S.yrs):"";yi.placeholder="เช่น 10";
-    card.append(yi);
-    card.append(btn("p","💾 บันทึกทั่วไป",()=>{
-      const r=parseNum(yi.value);
-      if(r.bad){yi.classList.add("err");toast(NUMMSG);return}
-      if(!r.empty&&!(r.v>0&&r.v<=60)){yi.classList.add("err");toast("จำนวนปีต้อง 1–60");return}
-      S.yrs=r.empty?0:r.v;done();toast("บันทึกแล้ว");
-    }));
+    if(j.type==="k")addF("ลงทุนต่อเดือน (บาท)","mon","เช่น 5000");
+    else if(j.type==="c"||j.type==="g"){addF("ฝากต่อเดือน (บาท)","mon","ไม่มีเว้นว่าง");addF("เป้าหมาย (บาท)","goal","ไม่มี");}
+    else if(j.type==="i")addF("กันต่อเดือน (บาท/เดือน)","mon","ไม่มีเว้นว่าง");
     w.append(card);
   }
 
@@ -847,20 +832,6 @@ function planPanel(g){
   const dj=S.jars.find(j=>j.type==="d"&&j.rest);
   if(dj){const li=el("li");li.append(el("span","n","= เหลือเป็นงบรายรับ-รายจ่าย"),el("b",null,fmt(monthly(dj))+" ฿"));lines.append(li)}
   w.append(lines);
-
-  const rows=[];
-  for(const j of S.jars){
-    if(j.type==="f"){rows.push(["PVD เราสมทบ",bk(j,"p"),S.salary*((j.emp||0)+(j.er||0))/100,j.prate]);rows.push(["สหกรณ์",bk(j,"s"),j.mon||0,j.srate])}
-    else if(j.type==="k"||j.type==="c"||j.type==="g")rows.push([j.name,bal(j),j.mon||0,j.rate]);
-  }
-  if(rows.length){
-    w.append(el("b",null,"ประมาณการอีก "+YR()+" ปี"));
-    const t=el("div","mt5");for(const h of ["รายการ","ตอนนี้","ฝาก/เดือน","%/ปี","อีก "+YR()+" ปี"])t.append(el("b",null,h));
-    let tot=0;
-    for(const [n,b0,m,r] of rows){const p=proj(b0,m,r,YR());tot+=p;t.append(el("span",null,n),el("span",null,fmt(b0)),el("span",null,fmt(m)),el("span",null,String(r||0)),el("span",null,fmt(p)))}
-    t.append(el("b",null,"รวม"),el("span"),el("span"),el("span"),el("b",null,fmt(tot)));
-    w.append(t);
-  }
   d.append(w);g.append(d);
 }
 function ledgerPanel(g){
@@ -1045,7 +1016,7 @@ function render(){
       inp.placeholder="จำนวนเงิน";q.append(inp,btn("m","− ใช้",go(-1)),btn("p","+ เติม",go(1)));c.append(q);
       const pay=btn("v","จ่ายเบี้ยงวดนี้",()=>{add(j,-(j.premium||0),"จ่ายเบี้ย");if(j.due){const d=new Date(j.due);j.cyc==="y"?d.setFullYear(d.getFullYear()+1):d.setMonth(d.getMonth()+1);j.due=ymd(d)}done()});
       pay.style.marginTop="8px";pay.style.width="100%";c.append(pay);
-      fld(set,"กันต่อเดือน (บาท)","i"&&j,"mon","n");
+      fld(set,"กันต่อเดือน (บาท)",j,"mon","n");
       fld(set,"เบี้ยต่องวด (บาท)",j,"premium","n");
       fld(set,"รอบจ่าย",j,"cyc","s",[["m","รายเดือน"],["y","รายปี"]]);
       fld(set,"ครบกำหนดจ่ายวันที่",j,"due","date");
