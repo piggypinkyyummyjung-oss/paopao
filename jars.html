@@ -502,7 +502,31 @@ function toast(m){
   _tt=setTimeout(()=>{t.style.display="none"},3500);
 }
 function hideToast(){const t=document.getElementById("toast");if(t)t.style.display="none"}
-function report(e){try{console.error(e)}catch(_){}}
+function report(e){
+  try{console.error(e)}catch(_){}
+  const msg=e&&e.message?e.message:String(e);
+  let banner=document.getElementById("__errbanner");
+  if(!banner){
+    banner=document.createElement("div");
+    banner.id="__errbanner";
+    banner.style.cssText="position:fixed;top:60px;left:12px;right:12px;background:#c00;color:#fff;padding:12px;border-radius:8px;font-size:12px;z-index:99999;word-break:break-all;max-height:200px;overflow:auto;line-height:1.4";
+    const closeBtn=document.createElement("button");
+    closeBtn.textContent="× ปิด";
+    closeBtn.style.cssText="float:right;background:#fff;color:#c00;border:0;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer";
+    closeBtn.onclick=()=>banner.remove();
+    banner.append(closeBtn);
+    const title=document.createElement("b");
+    title.textContent="Error:";
+    title.style.display="block";
+    title.style.marginBottom="4px";
+    banner.append(title);
+    document.body.append(banner);
+  }
+  const p=document.createElement("div");
+  p.textContent="• "+msg;
+  p.style.marginTop="4px";
+  banner.append(p);
+  }
 function safe(f){try{f()}catch(e){report(e)}}
 
 function parseNum(raw){
