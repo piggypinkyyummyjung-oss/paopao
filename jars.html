@@ -2265,8 +2265,6 @@ function salary(){
         ul.append(li);
         if(EDIT&&EDIT.t===t.id)ul.append(editForm(j,t));
       }
-      const del=el("button","lnk","ลบกระปุกนี้");del.type="button";
-      del.onclick=()=>confirmDel(j);
       if(j.type==="d"){
         const sm={};
         for(const t of cm(j))if(t.a<0&&!isSys(t)){const k=t.c||"ไม่ระบุหมวด";sm[k]=(sm[k]||0)-t.a}
