@@ -1121,17 +1121,7 @@ function clean(){
 }
 clean();migrate();
 if(LOADERR)setTimeout(()=>toast("อ่านข้อมูลเดิมไม่ได้ จึงเริ่มใหม่"),0);
-let NI="💰";
-function drawIcons(){const b=$("nic");b.innerHTML="";iconPick(b,NI,x=>{NI=x;drawIcons()})}
 $("demob").onclick=demo;
-$("addb").onclick=()=>{
-  const nn=$("nn"),na=$("na"),n=nn.value.trim(),av=pn(na);if(!n){nn._why="empty";need(nn);return}
-  if(na._why==="bad")return;const a=av||0;
-  const j={id:Date.now(),type:"g",name:n,ic:NI,rate:RATES.child,tx:[]};
-  if(a>0)j.tx.push({id:Date.now()+1,a,d:td(),n:"เงินตั้งต้น",c:"",k:"",o:1});
-  S.jars.push(j);OPEN=j.id;EXP[j.id]=true;
-  $("nn").value="";$("na").value="";done();
-};
 if(!S.jars.length&&!S.seeded){
   S.seeded=true;const t0=Date.now();
   S.jars=[
@@ -1145,7 +1135,7 @@ if(!S.jars.length&&!S.seeded){
 if(S.auto&&S.salary>0&&S.last!==curC()){run();store()}
 for(let i=1;i<=4;i++)$("nav"+i).onclick=()=>showTab(i);
 showTab(1);
-autoFund();store();drawIcons();render();refresh();lockUI();
+autoFund();store();render();refresh();lockUI();
 $("fab").onclick=()=>addJarDialog();
 </script>
 </body>
