@@ -23,15 +23,25 @@ class MainActivity : AppCompatActivity() {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.allowFileAccess = true
+        settings.allowContentAccess = true
+        settings.loadWithOverviewMode = true
+        settings.useWideViewPort = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
 
         bridge = AndroidBridge(this, webView)
         webView.addJavascriptInterface(bridge, "Android")
 
+        // Status bar สีดำ
+        window.statusBarColor = android.graphics.Color.parseColor("#000000")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            window.decorView.systemUiVisibility = 0
+        }
+
         webView.webViewClient = WebViewClient()
         webView.loadUrl("file:///android_asset/index.html")
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
