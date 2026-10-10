@@ -1912,21 +1912,8 @@ function salary(){
     toast(budgetMsg());
   }));
   planPanel(g);
-  ledgerPanel(g);
-  const used=S.salary>0?Math.round(
-    S.jars.filter(j=>!j.rest&&j.type!=="emg"&&j.type!=="debt")
-      .reduce((x,j)=>x+empPart(j),0)/S.salary*100
-  ):0;
-  const s=el("div","sub");
-  s.innerHTML="<span>แบ่งเข้ากระปุกแล้ว</span><b class='"+(used>100?"neg":"")+"'>"+used+"% (เหลือ "+(100-used)+"%)</b>";
-  g.append(s,btn("v","แบ่งตอนนี้ (โพสต์ยอดเข้ากระปุกออม)",()=>{
-    const r=run();
-    if(r===-1){toast("ใส่เงินเดือนก่อน");return}
-    if(r===0){toast("รอบนี้แบ่งครบแล้ว");return}
-    done();
-  }));
-  if(S.last)g.append(el("div","sub","แบ่งล่าสุดเดือน "+S.last));
-  c.append(g,SSLOT);
+ledgerPanel(g);
+c.append(g,SSLOT);
 }function render(){
   safe(applyTheme);
   safe(salary);
