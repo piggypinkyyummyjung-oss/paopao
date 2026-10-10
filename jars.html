@@ -489,7 +489,7 @@ function need(e){e.classList.add("err");if(e.focus)e.focus();if(e._why!=="bad")t
 addEventListener("error",e=>report(e.error||e.message));addEventListener("unhandledrejection",e=>report(e.reason));
 document.addEventListener("input",e=>{if(e.target.classList)e.target.classList.remove("err")});
 function failCard(j,e,jt,root){report(e);const c=el("section","card");c.append(el("div","neg","⚠️ กระปุก “"+(j&&j.name||"")+"” แสดงผลไม่ได้เพราะข้อมูลผิดปกติ"));const b=el("button","lnk","ลบกระปุกนี้");b.type="button";b.onclick=()=>{S.jars=S.jars.filter(x=>x!==j);done()};c.append(b);(j&&j.type==="d"?jt:root).append(c)}
-let EDIT=null,DT="",UNDO=null,RCO=0,CFO=false,IMPD=null,_ut=null,LASTAL="",PREVO=null,LOCKED=false,HIDT=0,RF="all",JOPEN=false,COPEN=false,NOPEN=false;
+let EDIT=null,DT="",UNDO=null,RCO=0,CFO=false,IMPD=null,_ut=null,LASTAL="",PREVO=null,LOCKED=false,HIDT=0,RF="all",JOPEN=false,COPEN=false,NOPEN=false,BOPEN=false,SECOPEN=false,SYSOPEN=false,WOPEN=false;
 const cats=()=>Array.isArray(S.cats)&&S.cats.length?S.cats:CATS;
 let LASTQ="";
 function syncQuick(){
@@ -627,7 +627,7 @@ function stageImport(text){
   try{const o=JSON.parse(text),d=o&&o.data?o.data:o;if(!d||!Array.isArray(d.jars))throw 0;
     IMPD={d,nj:d.jars.length,nt:d.jars.reduce((x,j)=>x+((j&&j.tx)||[]).length,0)};CFO=true;render()}
   catch(e){toast("ไฟล์สำรองไม่ถูกต้อง โปรดเลือกไฟล์ที่ส่งออกจากแอปนี้")}
-                }function catPanel(g){
+}function catPanel(g){
   const box=el("div","set");
   const list=cats();
   list.forEach((n,i)=>{
@@ -733,6 +733,7 @@ function notifPanel(g){
 }
 function cfgPanel(){
   const c=$("cfg");c.innerHTML="";
+  c.append(el("b",null,"⚙️ ตั้งค่า"));
   const g=el("div","grid");g.style.marginTop="10px";
   {
     const d=el("details");d.open=JOPEN;
@@ -760,42 +761,66 @@ function cfgPanel(){
     d.append(gc);g.append(d);
   }
   notifPanel(g);
-  g.append(el("b",null,"📁 สำรองข้อมูล"));
-  g.append(btn("v","💾 ส่งออกไฟล์สำรอง (JSON)",()=>saveFile("jars-backup-"+stamp()+".json","application/json",JSON.stringify({v:2,data:S}))));
-  g.append(btn("v","📊 ส่งออก CSV (เปิดใน Excel)",()=>saveFile("jars-"+stamp()+".csv","text/csv",csvOf())));
-  g.append(btn("v","📂 นำเข้าไฟล์สำรอง",()=>{const f=document.createElement("input");f.type="file";f.accept="application/json,.json";f.onchange=()=>{const fl=f.files&&f.files[0];if(!fl)return;const r=new FileReader();r.onload=()=>stageImport(String(r.result));r.onerror=()=>toast("อ่านไฟล์ไม่สำเร็จ");r.readAsText(fl)};f.click()}));
-  const ta=el("textarea");ta.placeholder="หรือวางข้อความสำรองที่นี่ แล้วกดนำเข้า";
-  g.append(ta,btn("v","นำเข้าจากข้อความ",()=>stageImport(ta.value)),btn("v","📋 คัดลอกข้อความสำรอง",()=>{ta.value=JSON.stringify({v:2,data:S});ta.select();try{document.execCommand("copy");toast("คัดลอกแล้ว")}catch(e){}}));
-  if(IMPD){
-    const b=el("div","imp");b.append(el("div",null,"พบข้อมูล "+IMPD.nj+" กระปุก "+IMPD.nt+" รายการ"));
-    const ok=btn("p","แทนที่ข้อมูลปัจจุบัน",()=>{if(!ok.dataset.c){ok.dataset.c="1";ok.textContent="แตะอีกครั้งเพื่อยืนยัน";return}
-      try{localStorage.setItem(KEY+"-bak",JSON.stringify(S))}catch(e){}
-      S=Object.assign({salary:0,auto:false,last:"",jars:[],seeded:true},IMPD.d);IMPD=null;clean();migrate();defNotif();clean();done();toast("นำเข้าข้อมูลแล้ว")});
-    const r=el("div","row2");r.append(ok,btn("m","ยกเลิก",()=>{IMPD=null;render()}));b.append(r);g.append(b);
+  {
+    const d=el("details");d.open=BOPEN;
+    d.addEventListener("toggle",()=>{BOPEN=d.open});
+    d.append(el("summary",null,"📁 สำรองข้อมูล"));
+    const gw=el("div","set");
+    gw.append(btn("v","💾 ส่งออกไฟล์สำรอง (JSON)",()=>saveFile("jars-backup-"+stamp()+".json","application/json",JSON.stringify({v:2,data:S}))));
+    gw.append(btn("v","📊 ส่งออก CSV (เปิดใน Excel)",()=>saveFile("jars-"+stamp()+".csv","text/csv",csvOf())));
+    gw.append(btn("v","📂 นำเข้าไฟล์สำรอง",()=>{const f=document.createElement("input");f.type="file";f.accept="application/json,.json";f.onchange=()=>{const fl=f.files&&f.files[0];if(!fl)return;const r=new FileReader();r.onload=()=>stageImport(String(r.result));r.onerror=()=>toast("อ่านไฟล์ไม่สำเร็จ");r.readAsText(fl)};f.click()}));
+    const ta=el("textarea");ta.placeholder="หรือวางข้อความสำรองที่นี่ แล้วกดนำเข้า";
+    gw.append(ta,btn("v","นำเข้าจากข้อความ",()=>stageImport(ta.value)),btn("v","📋 คัดลอกข้อความสำรอง",()=>{ta.value=JSON.stringify({v:2,data:S});ta.select();try{document.execCommand("copy");toast("คัดลอกแล้ว")}catch(e){}}));
+    if(IMPD){
+      const b=el("div","imp");b.append(el("div",null,"พบข้อมูล "+IMPD.nj+" กระปุก "+IMPD.nt+" รายการ"));
+      const ok=btn("p","แทนที่ข้อมูลปัจจุบัน",()=>{if(!ok.dataset.c){ok.dataset.c="1";ok.textContent="แตะอีกครั้งเพื่อยืนยัน";return}
+        try{localStorage.setItem(KEY+"-bak",JSON.stringify(S))}catch(e){}
+        S=Object.assign({salary:0,auto:false,last:"",jars:[],seeded:true},IMPD.d);IMPD=null;clean();migrate();defNotif();clean();done();toast("นำเข้าข้อมูลแล้ว")});
+      const r=el("div","row2");r.append(ok,btn("m","ยกเลิก",()=>{IMPD=null;render()}));b.append(r);gw.append(b);
+    }
+    d.append(gw);g.append(d);
   }
-  g.append(el("b",null,"🔒 ความปลอดภัย"));
-  if(window.Android&&Android.getLock){const l=el("label","chk"),c3=el("input");c3.type="checkbox";c3.checked=Android.getLock();c3.onchange=()=>{Android.setLock(c3.checked);toast(c3.checked?"เปิดล็อกแอปแล้ว":"ปิดล็อกแอปแล้ว")};l.append(c3,"ล็อกแอปด้วยลายนิ้วมือ / ใบหน้า / รหัสเครื่อง");g.append(l)}
-  const pr=el("div","set");pr.append(el("label",null,S.pin?"เปลี่ยน PIN":"ตั้ง PIN ล็อกแอป (ตัวเลข 4–6 หลัก)"));
-  const pi=el("input");pi.type="password";pi.inputMode="numeric";pi.maxLength=6;pi.placeholder="PIN 4–6 หลัก";pi.autocomplete="off";pr.append(pi);
-  const pr2=el("div","row2");
-  pr2.append(btn("p","บันทึก PIN",()=>{if(!/^\d{4,6}$/.test(pi.value)){pi.classList.add("err");toast("PIN ต้องเป็นตัวเลข 4–6 หลัก");return}S.pin=pinH(pi.value);done();toast("ตั้ง PIN แล้ว")}),S.pin?btn("m","ปิด PIN",()=>{delete S.pin;done();toast("ปิด PIN แล้ว")}):el("span"));
-  pr.append(pr2);g.append(pr);
-  g.append(el("b",null,"🔧 ตรวจระบบ"));
-  const out=el("ul");
-  g.append(btn("v","ตรวจระบบ",async()=>{
-    out.innerHTML="";const row=(ok,t)=>{const li=el("li");li.append(el("span","n",(ok?"✅ ":"❌ ")+t));out.append(li)};
-    try{localStorage.setItem("__t","1");row(localStorage.getItem("__t")==="1","เก็บข้อมูลในเครื่อง");localStorage.removeItem("__t")}catch(e){row(false,"เก็บข้อมูลในเครื่อง")}
-    row(!!window.Android,"เชื่อมต่อแอป Android");
-    if(window.Android&&Android.price){const p=await new Promise(res=>{const o1=window.__price,o2=window.__perr;let f=false;const fin=v=>{if(f)return;f=true;window.__price=o1;window.__perr=o2;res(v)};window.__price=(x,v)=>fin(v);window.__perr=()=>fin(0);Android.price("PTT.BK");setTimeout(()=>fin(-1),8000)});row(p>0,"ดึงราคาหุ้น (PTT.BK)"+(p>0?" = "+px(p):""))}
-    row(true,"ข้อมูล "+S.jars.length+" กระปุก "+S.jars.reduce((x,j)=>x+j.tx.length,0)+" รายการ");
-  }),out);
-  g.append(el("b",null,"🗑️ ล้างข้อมูล"));
-  const wipe=btn("m","ล้างข้อมูลทั้งหมด เริ่มใหม่",()=>{
-    if(!wipe.dataset.c){wipe.dataset.c="1";wipe.textContent="แน่ใจไหม? แตะอีกครั้ง";return}
-    try{localStorage.setItem(KEY+"-bak",JSON.stringify(S))}catch(e){}
-    S={salary:0,auto:false,last:"",jars:[]};flush();location.reload();
-  });
-  g.append(wipe);
+  {
+    const d=el("details");d.open=SECOPEN;
+    d.addEventListener("toggle",()=>{SECOPEN=d.open});
+    d.append(el("summary",null,"🔒 ความปลอดภัย"));
+    const gw=el("div","set");
+    if(window.Android&&Android.getLock){const l=el("label","chk"),c3=el("input");c3.type="checkbox";c3.checked=Android.getLock();c3.onchange=()=>{Android.setLock(c3.checked);toast(c3.checked?"เปิดล็อกแอปแล้ว":"ปิดล็อกแอปแล้ว")};l.append(c3,"ล็อกแอปด้วยลายนิ้วมือ / ใบหน้า / รหัสเครื่อง");gw.append(l)}
+    gw.append(el("label",null,S.pin?"เปลี่ยน PIN":"ตั้ง PIN ล็อกแอป (ตัวเลข 4–6 หลัก)"));
+    const pi=el("input");pi.type="password";pi.inputMode="numeric";pi.maxLength=6;pi.placeholder="PIN 4–6 หลัก";pi.autocomplete="off";gw.append(pi);
+    const pr2=el("div","row2");
+    pr2.append(btn("p","บันทึก PIN",()=>{if(!/^\d{4,6}$/.test(pi.value)){pi.classList.add("err");toast("PIN ต้องเป็นตัวเลข 4–6 หลัก");return}S.pin=pinH(pi.value);done();toast("ตั้ง PIN แล้ว")}),S.pin?btn("m","ปิด PIN",()=>{delete S.pin;done();toast("ปิด PIN แล้ว")}):el("span"));
+    gw.append(pr2);
+    d.append(gw);g.append(d);
+  }
+  {
+    const d=el("details");d.open=SYSOPEN;
+    d.addEventListener("toggle",()=>{SYSOPEN=d.open});
+    d.append(el("summary",null,"🔧 ตรวจระบบ"));
+    const gw=el("div","set");
+    const out=el("ul");
+    gw.append(btn("v","ตรวจระบบ",async()=>{
+      out.innerHTML="";const row=(ok,t)=>{const li=el("li");li.append(el("span","n",(ok?"✅ ":"❌ ")+t));out.append(li)};
+      try{localStorage.setItem("__t","1");row(localStorage.getItem("__t")==="1","เก็บข้อมูลในเครื่อง");localStorage.removeItem("__t")}catch(e){row(false,"เก็บข้อมูลในเครื่อง")}
+      row(!!window.Android,"เชื่อมต่อแอป Android");
+      if(window.Android&&Android.price){const p=await new Promise(res=>{const o1=window.__price,o2=window.__perr;let f=false;const fin=v=>{if(f)return;f=true;window.__price=o1;window.__perr=o2;res(v)};window.__price=(x,v)=>fin(v);window.__perr=()=>fin(0);Android.price("PTT.BK");setTimeout(()=>fin(-1),8000)});row(p>0,"ดึงราคาหุ้น (PTT.BK)"+(p>0?" = "+px(p):""))}
+      row(true,"ข้อมูล "+S.jars.length+" กระปุก "+S.jars.reduce((x,j)=>x+j.tx.length,0)+" รายการ");
+    }),out);
+    d.append(gw);g.append(d);
+  }
+  {
+    const d=el("details");d.open=WOPEN;
+    d.addEventListener("toggle",()=>{WOPEN=d.open});
+    d.append(el("summary",null,"🗑️ ล้างข้อมูล"));
+    const gw=el("div","set");
+    const wipe=btn("m","ล้างข้อมูลทั้งหมด เริ่มใหม่",()=>{
+      if(!wipe.dataset.c){wipe.dataset.c="1";wipe.textContent="แน่ใจไหม? แตะอีกครั้ง";return}
+      try{localStorage.setItem(KEY+"-bak",JSON.stringify(S))}catch(e){}
+      S={salary:0,auto:false,last:"",jars:[]};flush();location.reload();
+    });
+    gw.append(wipe);
+    d.append(gw);g.append(d);
+  }
   c.append(g);
 }
 const SSLOT=document.createElement("div");SSLOT.id="sslot";
@@ -937,7 +962,8 @@ function run(){
   }
   S.last=curC();
   return S.jars.reduce((x,j)=>x+j.tx.length,0)-n0;
-}function salary(){
+}
+function budgetMsg(){const dj=S.jars.find(j=>j.type==="d"&&j.rest);return "บันทึกแล้ว"+(dj?" · งบรอบนี้ "+fmt(monthly(dj))+" ฿":"")}function salary(){
   const c=$("sal");c.innerHTML="";
   const g=el("div","grid");
   g.append(el("b",null,"💰 เงินเดือนและการแบ่งเงินเดือน"));
@@ -1210,4 +1236,3 @@ $("fab").onclick=()=>addJarDialog();
 </script>
 </body>
 </html>
-function budgetMsg(){const dj=S.jars.find(j=>j.type==="d"&&j.rest);return "บันทึกแล้ว"+(dj?" · งบรอบนี้ "+fmt(monthly(dj))+" ฿":"")}
