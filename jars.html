@@ -99,7 +99,10 @@
   .chk input { width: auto; }
   .grid { display: flex; flex-direction: column; gap: 8px; }
   .empty { text-align: center; color: var(--mute); padding: 20px; font-size: 14px; }
-  .alert { background: #FFF8E6; border: 1px solid #FFE8B3; color: #8A6D00; padding: 10px 12px; border-radius: 12px; font-size: 13px; margin-bottom: 8px; }
+  .alert { background: #FFF8E6; border: 1px solid #FFE8B3; color: #8A6D00; padding: 10px 12px; border-radius: 12px; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .alert span { flex: 1; }
+  .alert .x { background: none; border: 0; color: #8A6D00; font-size: 20px; padding: 0 6px; cursor: pointer; line-height: 1; }
+  .alert .x:active { transform: scale(0.9); }
   .imp { background: #FFF5F5; border: 1px solid #FFD5D5; padding: 10px; border-radius: 12px; font-size: 13px; }
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
   .st { background: #FDFAFC; border-radius: 12px; padding: 10px; border: 1px solid var(--line); }
@@ -143,7 +146,6 @@
   dialog p { margin: 6px 0; font-size: 14px; color: var(--mute); }
   dialog .btns { display: flex; gap: 8px; margin-top: 16px; }
   dialog .btns button { flex: 1; }
-  dialog select { margin-top: 8px; }
   #toast {
     position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
     background: rgba(45,42,50,0.95); color: #fff; padding: 12px 20px;
@@ -208,7 +210,6 @@
   <div id="jars"></div>
   <div id="recent"></div>
   <div id="sslot"></div>
-  <button class="b v" id="demob" style="width:100%;margin-top:8px">✨ ลองใช้ข้อมูลตัวอย่าง</button>
 </section>
 
 <section id="tab2" hidden>
@@ -254,7 +255,13 @@ function migrate(){
     if(!had)S.jars.splice(Math.max(0,Math.min(at,S.jars.length)),0,f);
   }catch(e){LOADERR=true}
 }
-clean();migrate();
+function defNotif(){
+  if(!S.notif)S.notif={};
+  if(!S.notif.daily)S.notif.daily={on:true,pct:100};
+  if(!S.notif.cats)S.notif.cats={on:true,pct:90,over:true,list:[]};
+  if(!S.dismissed)S.dismissed={};
+}
+clean();migrate();defNotif();
 const $=id=>document.getElementById(id);
 let _st=null;
 const flush=()=>{if(_st){clearTimeout(_st);_st=null}try{const j=JSON.stringify(S);LASTSAVED=j;if(window.Android)Android.save(j);else localStorage.setItem(KEY,j)}catch(e){toast(e&&e.name==="QuotaExceededError"?"พื้นที่จัดเก็บเต็ม กรุณาลบรายการเก่าบางส่วน":"บันทึกข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง")}};
@@ -493,7 +500,7 @@ function syncQuick(){
 }
 function syncNative(){
   if(!window.Android)return;
-  try{const r=Android.load();if(r&&r!==LASTSAVED){S=Object.assign({salary:0,auto:false,last:"",jars:[]},JSON.parse(r));LASTSAVED=r;clean();migrate();clean();V++;render()}}catch(e){report(e)}
+  try{const r=Android.load();if(r&&r!==LASTSAVED){S=Object.assign({salary:0,auto:false,last:"",jars:[]},JSON.parse(r));LASTSAVED=r;clean();migrate();defNotif();clean();V++;render()}}catch(e){report(e)}
 }
 function renameCat(a,b){
   S.cats=cats().map(x=>x===a?b:x);
@@ -536,25 +543,58 @@ function editForm(j,t){
 }
 function postRec(j){const cur=curC();for(const r of j.rec||[]){if(!r.last)r.last=cur;let g=0;while(r.last<cur&&g++<120){r.last=shiftM(r.last,1);const d=cs(r.last),t={id:Date.now()+Math.random(),a:-r.a,d:d>td()?td():d,n:"ประจำ: "+r.n};if(r.c)t.c=r.c;j.tx.push(t)}}}
 function alertsList(){
-  const L=[],t0=td();
-  if(S.salary>0&&!S.auto&&S.last!==curC())L.push("💰 รอบเงินเดือนใหม่เริ่มแล้ว กด “แบ่งตอนนี้” ในแท็บเป๋าหลัก");
-  for(const j of S.jars){
-    if(j.type==="i"&&j.due&&j.premium>0){const n=dd(t0,j.due);if(n<=7)L.push("🛡️ "+j.name+(n<0?" เลยกำหนดจ่ายเบี้ย "+(-n)+" วัน":n===0?" ครบกำหนดจ่ายเบี้ยวันนี้":" ครบกำหนดจ่ายเบี้ยอีก "+n+" วัน"))}
-    if(j.type==="d"&&j.cb)for(const k of Object.keys(j.cb)){const b=j.cb[k];if(!(b>0))continue;const sp=-cm(j).filter(t=>t.a<0&&t.c===k).reduce((x,t)=>x+t.a,0);if(sp>b)L.push("⚠️ "+k+" เกินงบ "+fmt(sp-b)+" ฿");else if(sp>=b*0.9)L.push("⚡ "+k+" ใช้ไป "+Math.round(sp/b*100)+"% ของงบ")}
+  const L=[],t0=td(),N=S.notif||{};
+  const dj=S.jars.find(j=>j.type==="d");
+  if(dj && N.daily && N.daily.on!==false){
+    const net=cm(dj).filter(t=>t.d===t0&&!isSys(t)).reduce((s,t)=>s+t.a,0);
+    const spent=-cm(dj).filter(t=>t.d===t0&&t.a<0&&!isSys(t)).reduce((s,t)=>s+t.a,0);
+    const dl=Math.max(1,dd(t0,dj.end||eom())+1);
+    const b=bal(dj);
+    const lim=b/dl+net;
+    if(lim>0){
+      const pct=spent/lim*100;
+      const th=N.daily.pct||100;
+      if(pct>=th)L.push({id:"daily:"+t0,text:"💸 วันนี้ใช้ไป "+Math.round(pct)+"% ของงบวัน ("+fmt(spent)+" / "+fmt(lim)+" ฿)"});
+    }
   }
-  return L;
+  if(N.cats && N.cats.on!==false){
+    const sel=N.cats.list||[];
+    const th=N.cats.pct||90;
+    for(const j of S.jars){
+      if(j.type!=="d"||!j.cb)continue;
+      for(const k of Object.keys(j.cb)){
+        const b=j.cb[k];
+        if(!(b>0))continue;
+        if(sel.length && !sel.includes(k))continue;
+        const sp=-cm(j).filter(t=>t.a<0&&t.c===k).reduce((x,t)=>x+t.a,0);
+        const pct=sp/b*100;
+        if(N.cats.over!==false && sp>b){
+          L.push({id:"cat-over:"+k,text:"⚠️ "+k+" เกินงบ "+fmt(sp-b)+" ฿ (ใช้ "+fmt(sp)+" / "+fmt(b)+" ฿)"});
+        }else if(pct>=th){
+          L.push({id:"cat-near:"+k,text:"⚡ "+k+" ใช้ไป "+Math.round(pct)+"% ของงบ ("+fmt(sp)+" / "+fmt(b)+" ฿)"});
+        }
+      }
+    }
+  }
+  const dis=S.dismissed||{};
+  return L.filter(x=>dis[x.id]!==t0);
 }
-function alertsPanel(){const c=$("alerts"),L=alertsList();c.innerHTML="";c.style.display=L.length?"":"none";for(const x of L)c.append(el("div","alert",x))}
+function alertsPanel(){
+  const c=$("alerts"),L=alertsList();
+  c.innerHTML="";c.style.display=L.length?"":"none";
+  for(const x of L){
+    const a=el("div","alert");
+    const s=el("span",null,x.text);
+    const b=el("button","x","×");b.type="button";b.setAttribute("aria-label","ปิด");
+    b.onclick=()=>{S.dismissed=S.dismissed||{};S.dismissed[x.id]=td();store();render()};
+    a.append(s,b);c.append(a);
+  }
+}
 function syncAlerts(){
   if(!window.Android)return;
-  const out=[],t0=td(),lim=ymd(new Date(Date.now()+90*864e5));
-  const put=(d,t,m)=>{if(d>=t0&&d<=lim)out.push({d,t,m})};
-  for(const j of S.jars)if(j.type==="i"&&j.due&&j.premium>0)for(const o of [7,3,1,0]){const x=pdt(j.due);x.setDate(x.getDate()-o);put(ymd(x),"🛡️ "+j.name,o?"ครบกำหนดจ่ายเบี้ยอีก "+o+" วัน":"ครบกำหนดจ่ายเบี้ยวันนี้")}
-  if(S.salary>0)put(cs(shiftM(curC(),1)),"💰 เงินเดือนออกวันนี้","เปิดแอปเพื่อแบ่งเงินเข้ากระปุก");
+  const out=[],t0=td();
+  for(const a of alertsList())out.push({d:t0,t:"Paopao",m:a.text});
   const j2=JSON.stringify(out);if(j2!==LASTAL){LASTAL=j2;try{if(Android.setAlerts)Android.setAlerts(j2)}catch(e){}}
-  const over=new Set(alertsList().filter(x=>x.startsWith("⚠️")));
-  if(PREVO)for(const x of over)if(!PREVO.has(x)){try{if(Android.pushNote)Android.pushNote("แจ้งเตือนงบ",x.slice(2).trim())}catch(e){}}
-  PREVO=over;
 }
 const h53=(str,seed=0)=>{let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677)}h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);return String(4294967296*(2097151&h2)+(h1>>>0))};
 const pinH=p=>h53("jars|"+p);
@@ -587,7 +627,7 @@ function stageImport(text){
   try{const o=JSON.parse(text),d=o&&o.data?o.data:o;if(!d||!Array.isArray(d.jars))throw 0;
     IMPD={d,nj:d.jars.length,nt:d.jars.reduce((x,j)=>x+((j&&j.tx)||[]).length,0)};CFO=true;render()}
   catch(e){toast("ไฟล์สำรองไม่ถูกต้อง โปรดเลือกไฟล์ที่ส่งออกจากแอปนี้")}
-}function catPanel(g){
+               }function catPanel(g){
   const box=el("div","set");
   box.append(el("label",null,"🏷️ หมวดจัดการรายรับ-รายจ่าย"));
   const list=cats();
@@ -606,7 +646,7 @@ function confirmDelCat(name){
   dlg.append(el("h3",null,"⚠️ ยืนยันการลบหมวด"));
   dlg.append(el("p",null,"“"+name+"”"));
   const cnt=S.jars.reduce((x,j)=>x+j.tx.filter(t=>t.c===name).length,0);
-  dlg.append(el("p",null,cnt>0?"มี "+cnt+" รายการใช้หมวดนี้อยู่ — รายการจะยังอยู่ แต่จะไม่มีหมวด":  "ยังไม่มีรายการใช้หมวดนี้"));
+  dlg.append(el("p",null,cnt>0?"มี "+cnt+" รายการใช้หมวดนี้อยู่ — รายการจะยังอยู่ แต่จะไม่มีหมวด":"ยังไม่มีรายการใช้หมวดนี้"));
   const btns=el("div","btns");
   btns.append(btn("v","ยกเลิก",()=>dlg.close()),btn("m","ลบเลย",()=>{S.cats=cats().filter(x=>x!==name);CFO=true;dlg.close();done()}));
   dlg.append(btns);document.body.append(dlg);
@@ -650,6 +690,44 @@ function addJarDialog(){
   dlg.append(ni,ai,ic,btns);document.body.append(dlg);
   dlg.showModal();dlg.addEventListener("close",()=>dlg.remove());
 }
+function notifPanel(g){
+  const d=el("details");d.open=false;
+  d.append(el("summary",null,"🔔 การแจ้งเตือน"));
+  const w=el("div","set");
+  const N=S.notif;
+  w.append(el("b",null,"💸 งบรายวัน"));
+  const dl=el("label","chk"),dc=el("input");dc.type="checkbox";dc.checked=N.daily.on!==false;
+  dc.onchange=()=>{N.daily.on=dc.checked;done()};
+  dl.append(dc,"เปิดใช้งาน");w.append(dl);
+  {const r=el("div","row2");r.append(el("label",null,"เตือนเมื่อใช้เกิน (%)"));
+   const i=el("input");i.type="text";i.inputMode="decimal";i.value=String(N.daily.pct||100);i.onchange=()=>{const x=parseNum(i.value);if(x.bad||x.empty){i.classList.add("err");toast(NUMMSG);return}N.daily.pct=x.v;done()};
+   r.append(i);w.append(r);}
+  w.append(el("b",null,"📊 งบประมาณรายหมวด"));
+  const cl=el("label","chk"),cc=el("input");cc.type="checkbox";cc.checked=N.cats.on!==false;
+  cc.onchange=()=>{N.cats.on=cc.checked;done()};
+  cl.append(cc,"เปิดใช้งาน");w.append(cl);
+  {const r=el("div","row2");r.append(el("label",null,"เตือนที่ (% ของงบ)"));
+   const i=el("input");i.type="text";i.inputMode="decimal";i.value=String(N.cats.pct||90);i.onchange=()=>{const x=parseNum(i.value);if(x.bad||x.empty){i.classList.add("err");toast(NUMMSG);return}N.cats.pct=x.v;done()};
+   r.append(i);w.append(r);}
+  const ol=el("label","chk"),oc=el("input");oc.type="checkbox";oc.checked=N.cats.over!==false;
+  oc.onchange=()=>{N.cats.over=oc.checked;done()};
+  ol.append(oc,"เตือนเมื่อเกินงบ");w.append(ol);
+  w.append(el("label",null,"เลือกหมวดที่จะเตือน (ว่าง = ทุกหมวด)"));
+  const cg=el("div","set");
+  for(const k of cats()){
+    const l=el("label","chk"),c=el("input");c.type="checkbox";
+    c.checked=!N.cats.list||!N.cats.list.length||N.cats.list.includes(k);
+    c.onchange=()=>{
+      if(!N.cats.list||!N.cats.list.length)N.cats.list=cats().slice();
+      if(c.checked){if(!N.cats.list.includes(k))N.cats.list.push(k)}
+      else N.cats.list=N.cats.list.filter(x=>x!==k);
+      done();
+    };
+    l.append(c,k);cg.append(l);
+  }
+  w.append(cg);
+  d.append(w);g.append(d);
+}
 function cfgPanel(){
   const c=$("cfg");c.innerHTML="";
   const g=el("div","grid");g.style.marginTop="10px";
@@ -667,12 +745,7 @@ function cfgPanel(){
   g.append(jl);
   g.append(el("b",null,"🏷️ หมวดจัดการรายรับ-รายจ่าย"));
   catPanel(g);
-  g.append(el("b",null,"🎨 Widget"));
-  g.append(btn("v","เลือกหมวดปุ่มลัด Widget",()=>{
-    const cur=S.wcats||["ค่าอาหาร","ค่าช้อปปิ้ง","ค่าเดินทาง"];
-    const nn=prompt("ใส่ชื่อหมวด 3 อัน คั่นด้วยเครื่องหมายจุลภาค (,)",cur.join(","));
-    if(nn!=null){S.wcats=nn.split(",").map(s=>s.trim()).filter(Boolean).slice(0,3);CFO=true;done();toast("บันทึกแล้ว")}
-  }));
+  notifPanel(g);
   g.append(el("b",null,"📁 สำรองข้อมูล"));
   g.append(btn("v","💾 ส่งออกไฟล์สำรอง (JSON)",()=>saveFile("jars-backup-"+stamp()+".json","application/json",JSON.stringify({v:2,data:S}))));
   g.append(btn("v","📊 ส่งออก CSV (เปิดใน Excel)",()=>saveFile("jars-"+stamp()+".csv","text/csv",csvOf())));
@@ -683,7 +756,7 @@ function cfgPanel(){
     const b=el("div","imp");b.append(el("div",null,"พบข้อมูล "+IMPD.nj+" กระปุก "+IMPD.nt+" รายการ"));
     const ok=btn("p","แทนที่ข้อมูลปัจจุบัน",()=>{if(!ok.dataset.c){ok.dataset.c="1";ok.textContent="แตะอีกครั้งเพื่อยืนยัน";return}
       try{localStorage.setItem(KEY+"-bak",JSON.stringify(S))}catch(e){}
-      S=Object.assign({salary:0,auto:false,last:"",jars:[],seeded:true},IMPD.d);IMPD=null;clean();migrate();clean();done();toast("นำเข้าข้อมูลแล้ว")});
+      S=Object.assign({salary:0,auto:false,last:"",jars:[],seeded:true},IMPD.d);IMPD=null;clean();migrate();defNotif();clean();done();toast("นำเข้าข้อมูลแล้ว")});
     const r=el("div","row2");r.append(ok,btn("m","ยกเลิก",()=>{IMPD=null;render()}));b.append(r);g.append(b);
   }
   g.append(el("b",null,"🔒 ความปลอดภัย"));
@@ -851,22 +924,7 @@ function run(){
   S.last=curC();
   return S.jars.reduce((x,j)=>x+j.tx.length,0)-n0;
 }
-function demo(){
-  S.salary=30000;S.auto=false;
-  const m=(a,n)=>[{id:Math.random(),a,d:td(),n}];
-  S.jars=[
-    {id:1,type:"d",name:"รายรับ-รายจ่าย (ตัวอย่าง)",end:eom(),rest:true,cb:{"ค่ารายเดือนทั่วไป":3000,"ค่าโทรศัพท์":599,"ค่าอาหาร":6000,"ค่าเดินทาง":2500,"ค่าช้อปปิ้ง":1500},tx:[]},
-    {id:2,type:"f",name:"PVD + สหกรณ์ (ตัวอย่าง)",emp:5,er:5,prate:5,mon:3000,srate:5,pvdEmp:9,yrs:10,tx:[{id:Math.random(),a:120000,d:td(),n:"ยอดปัจจุบัน",k:"p"},{id:Math.random(),a:60000,d:td(),n:"ทุนเรือนหุ้น",k:"s"}]},
-    {id:3,type:"i",name:"ประกัน (ตัวอย่าง)",pct:7,premium:24000,cyc:"y",due:ymd(new Date(Date.now()+60*864e5)),cover:1000000,tx:m(4000,"เริ่มต้น")},
-    {id:5,type:"k",name:"DCA หุ้น (ตัวอย่าง)",mon:5000,rate:7,yrs:10,sym:"PTT.BK",price:34,pt:Date.now(),tx:[{id:Math.random(),a:48000,d:td(),n:"ลงทุนสะสม",u:1500}]},
-    {id:7,type:"c",name:"กองทุนลูก (ตัวอย่าง)",mon:3000,goal:500000,yrs:10,rate:3,tx:m(40000,"เริ่มต้น")}
-  ];
-  const od=ymd(new Date(Date.now()-70*864e5));S.jars.forEach(x=>{if(x.type!=="d"&&x.type!=="o")x.tx.forEach(t=>{t.d=od;t.o=1})});
-  const r=S.jars[0];for(const [a,c] of [[120,"ค่าอาหาร"],[230,"ค่าอาหาร"],[45,"ค่าเดินทาง"],[105,"ค่าเดินทาง"],[80,"ค่าน้ำ"],[420,"ค่าช้อปปิ้ง"],[599,"ค่าโทรศัพท์"]])add(r,-a,"",false,c);run();
-  done();
-}
-function budgetMsg(){const dj=S.jars.find(j=>j.type==="d"&&j.rest);return "บันทึกแล้ว"+(dj?" · งบรอบนี้ "+fmt(monthly(dj))+" ฿":"")}
-function salary(){
+function budgetMsg(){const dj=S.jars.find(j=>j.type==="d"&&j.rest);return "บันทึกแล้ว"+(dj?" · งบรอบนี้ "+fmt(monthly(dj))+" ฿":"")}function salary(){
   const c=$("sal");c.innerHTML="";
   const g=el("div","grid");
   g.append(el("b",null,"💰 เงินเดือนและการแบ่งเงินเดือน"));
@@ -897,7 +955,7 @@ function salary(){
 }
 function render(){
   safe(salary);safe(sumPanel);safe(alertsPanel);safe(cfgPanel);safe(syncAlerts);safe(syncQuick);
-  const root=$("jars");root.innerHTML="";const jt=$("jtop");jt.innerHTML="";SSLOT.innerHTML="";$("demob").hidden=!!(S.salary>0||S.jars.some(j=>j.tx.length));
+  const root=$("jars");root.innerHTML="";const jt=$("jtop");jt.innerHTML="";SSLOT.innerHTML="";
   if(!S.jars.length)root.append(el("p","empty","🐷 ยังไม่มีกระปุก กด ➕ เพิ่มกระปุกใหม่ด้านล่าง"));
   for(const j of S.jars){try{
     const b=bal(j),c=el("section","card t-"+j.type),top=el("div","top");
@@ -1119,9 +1177,9 @@ function clean(){
     j.tx=(Array.isArray(j.tx)?j.tx:[]).filter(t=>t&&Number.isFinite(+t.a)&&typeof t.d==="string"&&/^\d{4}-\d{2}-\d{2}/.test(t.d)).map(t=>{t.a=+t.a;return t});
   }
 }
-clean();migrate();
+clean();migrate();defNotif();
 if(LOADERR)setTimeout(()=>toast("อ่านข้อมูลเดิมไม่ได้ จึงเริ่มใหม่"),0);
-$("demob").onclick=demo;
+$("demob")&&($("demob").onclick=null);
 if(!S.jars.length&&!S.seeded){
   S.seeded=true;const t0=Date.now();
   S.jars=[
