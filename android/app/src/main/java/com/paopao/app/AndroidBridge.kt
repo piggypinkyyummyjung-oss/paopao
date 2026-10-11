@@ -109,7 +109,7 @@ class AndroidBridge(
         }
     }
 
-    // ============ 🆕 Widget ============
+    // ============ Widget ============
     @JavascriptInterface
     fun setWidget(json: String) {
         prefs.edit().putString("widget_data", json).apply()
@@ -132,7 +132,26 @@ class AndroidBridge(
         }
     }
 
-    // ============ 🆕 การแจ้งเตือน ============
+    // ============ Widget Pending Queue ============
+    @JavascriptInterface
+    fun takePending(): String {
+        val pending = prefs.getString("widget_pending", "[]") ?: "[]"
+        prefs.edit().putString("widget_pending", "[]").apply()
+        return pending
+    }
+
+    @JavascriptInterface
+    fun hasPending(): Boolean {
+        val pending = prefs.getString("widget_pending", "[]") ?: "[]"
+        return pending != "[]" && pending.length > 2
+    }
+
+    @JavascriptInterface
+    fun clearPending() {
+        prefs.edit().putString("widget_pending", "[]").apply()
+    }
+
+    // ============ การแจ้งเตือน ============
     @JavascriptInterface
     fun setAlerts(json: String) {
         prefs.edit().putString("alerts", json).apply()
