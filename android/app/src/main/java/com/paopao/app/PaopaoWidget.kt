@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.widget.RemoteViews
+import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -22,8 +23,11 @@ class PaopaoWidget : AppWidgetProvider() {
         const val ACTION_WIDGET_EVENT = "com.paopao.app.WIDGET_EVENT"
         const val EXTRA_CAT = "cat"
         const val EXTRA_TYPE = "type"
+        const val EXTRA_AMT = "amt"
         const val PREFS = "paopao_widget"
         const val KEY_DATA = "widget_data"
+        const val PENDING_PREFS = "paopao"
+        const val KEY_PENDING = "widget_pending"
     }
 
     override fun onUpdate(context: Context, mgr: AppWidgetManager, ids: IntArray) {
@@ -35,11 +39,35 @@ class PaopaoWidget : AppWidgetProvider() {
         when (intent.action) {
             ACTION_WIDGET_ADD, ACTION_WIDGET_MINUS -> {
                 val cat = intent.getStringExtra(EXTRA_CAT) ?: "ค่าอาหาร"
-                val type = if (intent.action == ACTION_WIDGET_ADD) "add" else "minus"
+                val amt = intent.getDoubleExtra(EXTRA_AMT, 100.0)
+                val type = if (intent.action == ACTION_WIDGET_ADD) "in" else "out"
+
+                // 1. บันทึก pending queue
+                try {
+                    val prefs = context.getSharedPreferences(PENDING_PREFS, Context.MODE_PRIVATE)
+                    val raw = prefs.getString(KEY_PENDING, "[]") ?: "[]"
+                    val arr = JSONArray(raw)
+                    val obj = JSONObject().apply {
+                        put("id", System.currentTimeMillis().toString() + "_" + (Math.random() * 1000).toInt())
+                        put("a", amt)
+                        put("kind", type)
+                        put("c", cat)
+                        put("d", SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
+                    }
+                    arr.put(obj)
+                    prefs.edit().putString(KEY_PENDING, arr.toString()).apply()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // 2. Broadcast ไป MainActivity
                 val b = Intent(ACTION_WIDGET_EVENT)
                 b.putExtra(EXTRA_CAT, cat)
                 b.putExtra(EXTRA_TYPE, type)
+                b.putExtra(EXTRA_AMT, amt)
                 context.sendBroadcast(b)
+
+                // 3. Update widget UI
                 val mgr = AppWidgetManager.getInstance(context)
                 val ids = mgr.getAppWidgetIds(
                     ComponentName(context, PaopaoWidget::class.java)
@@ -100,6 +128,7 @@ class PaopaoWidget : AppWidgetProvider() {
             val addIntent = Intent(context, PaopaoWidget::class.java).apply {
                 action = ACTION_WIDGET_ADD
                 putExtra(EXTRA_CAT, firstCat)
+                putExtra(EXTRA_AMT, 100.0)
             }
             val addPi = PendingIntent.getBroadcast(
                 context, 100, addIntent,
@@ -110,6 +139,7 @@ class PaopaoWidget : AppWidgetProvider() {
             val minIntent = Intent(context, PaopaoWidget::class.java).apply {
                 action = ACTION_WIDGET_MINUS
                 putExtra(EXTRA_CAT, firstCat)
+                putExtra(EXTRA_AMT, 100.0)
             }
             val minPi = PendingIntent.getBroadcast(
                 context, 101, minIntent,
@@ -138,6 +168,7 @@ class PaopaoWidget : AppWidgetProvider() {
         val i = Intent(context, PaopaoWidget::class.java).apply {
             action = ACTION_WIDGET_ADD
             putExtra(EXTRA_CAT, catName)
+            putExtra(EXTRA_AMT, 100.0)
         }
         val pi = PendingIntent.getBroadcast(
             context, catName.hashCode(), i,
