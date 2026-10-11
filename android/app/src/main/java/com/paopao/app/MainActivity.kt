@@ -20,12 +20,10 @@ class MainActivity : AppCompatActivity() {
     // รับ event จาก Widget
     private val widgetReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val cat = intent.getStringExtra(PaopaoWidget.EXTRA_CAT) ?: return
-            val type = intent.getStringExtra(PaopaoWidget.EXTRA_TYPE) ?: "add"
-            val amt = intent.getDoubleExtra("amt", 100.0)
             runOnUiThread {
-                val js = "javascript:if(window.__widgetAdd){window.__widgetAdd('$cat',$amt,'$type')}"
-                webView.evaluateJavascript(js, null)
+                webView.evaluateJavascript(
+                    "javascript:if(window.__drain){window.__drain()}", null
+                )
             }
         }
     }
@@ -55,11 +53,21 @@ class MainActivity : AppCompatActivity() {
             window.decorView.systemUiVisibility = 0
         }
 
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // เรียก drainPending หลังโหลดหน้าเสร็จ
+                view?.postDelayed({
+                    view.evaluateJavascript(
+                        "javascript:if(window.__drain){window.__drain()}", null
+                    )
+                }, 500)
+            }
+        }
         webView.loadUrl("file:///android_asset/index.html")
     }
 
-    // ลงทะเบียนรับ event จาก Widget ตอนเปิดแอป
+    // ลงทะเบียนรับ event จาก Widget
     override fun onResume() {
         super.onResume()
         val filter = IntentFilter(PaopaoWidget.ACTION_WIDGET_EVENT)
