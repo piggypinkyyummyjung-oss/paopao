@@ -1,7 +1,10 @@
 package com.paopao.app
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
@@ -19,6 +22,7 @@ class AndroidBridge(
     private val prefs = activity.getSharedPreferences("paopao", Context.MODE_PRIVATE)
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // ============ ข้อมูลหลัก ============
     @JavascriptInterface
     fun load(): String? = prefs.getString("data", null)
 
@@ -27,6 +31,7 @@ class AndroidBridge(
         prefs.edit().putString("data", json).apply()
     }
 
+    // ============ ล็อกแอป ============
     @JavascriptInterface
     fun getLock(): Boolean = prefs.getBoolean("lock", false)
 
@@ -35,6 +40,7 @@ class AndroidBridge(
         prefs.edit().putBoolean("lock", enabled).apply()
     }
 
+    // ============ สำรองไฟล์ ============
     @JavascriptInterface
     fun saveFile(name: String, mime: String, text: String) {
         try {
@@ -57,6 +63,7 @@ class AndroidBridge(
         }
     }
 
+    // ============ ลายนิ้วมือ ============
     @JavascriptInterface
     fun bio() {
         val act = activity as? FragmentActivity ?: return
@@ -87,7 +94,7 @@ class AndroidBridge(
         }
     }
 
-    // ดึงราคาหุ้น — ตัวอย่างจำลอง (ต่อ API จริงภายหลังได้)
+    // ============ ราคาหุ้น ============
     @JavascriptInterface
     fun price(symbol: String) {
         mainHandler.post {
@@ -101,4 +108,36 @@ class AndroidBridge(
             }
         }
     }
+
+    // ============ 🆕 Widget ============
+    @JavascriptInterface
+    fun setWidget(json: String) {
+        prefs.edit().putString("widget_data", json).apply()
+        mainHandler.post {
+            try {
+                val mgr = AppWidgetManager.getInstance(activity)
+                val ids = mgr.getAppWidgetIds(
+                    ComponentName(activity, PaopaoWidget::class.java)
+                )
+                if (ids.isNotEmpty()) {
+                    val intent = Intent(activity, PaopaoWidget::class.java).apply {
+                        action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                    }
+                    activity.sendBroadcast(intent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // ============ 🆕 การแจ้งเตือน ============
+    @JavascriptInterface
+    fun setAlerts(json: String) {
+        prefs.edit().putString("alerts", json).apply()
+    }
+
+    @JavascriptInterface
+    fun getAlerts(): String? = prefs.getString("alerts", null)
 }
