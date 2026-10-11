@@ -2053,9 +2053,8 @@ function render(){
   safe(syncWidget);
 
   const root=$("jars");root.innerHTML="";
-  const jt=$("jtop");jt.innerHTML="";
-  SSLOT.innerHTML="";
-
+const jt=$("jtop");jt.innerHTML="";
+const sslot=$("sslot");if(sslot)sslot.innerHTML="";
   if(!S.jars.length){
     root.append(el("p","empty","🐷 ยังไม่มีกระปุก"));
   }
