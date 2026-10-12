@@ -7,12 +7,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # jars.html ที่ราก repo คือไฟล์หลัก: ก๊อปเข้าแอปทุกครั้งที่ build (แก้ jars.html แล้ว push = แอปอัปเดต)
+      - name: Copy web app into assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp jars.html android/app/src/main/assets/index.html
+
+      # ลบไฟล์ Android รุ่นเก่าที่อาจค้างอยู่ใน repo (ไม่มีก็ข้ามไป)
+      - name: Remove legacy files
+        run: |
+          rm -f android/app/src/main/java/com/paopao/app/AndroidBridge.kt
+          rm -f android/app/src/main/res/layout/widget_paopao.xml
+          rm -f android/app/src/main/res/drawable/widget_btn_minus.xml android/app/src/main/res/drawable/widget_btn_plus.xml
+          rm -f android/app/src/main/res/drawable/widget_input_bg.xml android/app/src/main/res/drawable/widget_progress.xml
+
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.7" }
-      - run: gradle assembleDebug --stacktrace
+      - name: Build debug APK
+        working-directory: android
+        run: gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: paopao-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
