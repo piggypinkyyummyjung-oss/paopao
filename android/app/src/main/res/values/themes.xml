@@ -1,0 +1,4 @@
+<resources>
+    <style name="Theme.Paopao" parent="Theme.AppCompat.Light.NoActionBar" />
+    <style name="Theme.Paopao.Dialog" parent="android:Theme.Material.Light.Dialog" />
+</resources>
