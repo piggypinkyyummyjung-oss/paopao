@@ -2170,7 +2170,6 @@ function render(){
 
   const root=$("jars");root.innerHTML="";
   const jt=$("jtop");jt.innerHTML="";
-  if(S.jars.filter(j=>!j.arch).length>1){const tb=btn("v","🔁 โยกเงินข้ามกระปุก",transferDialog);tb.style.cssText="width:100%;margin-bottom:12px";jt.append(tb)}
 
   if(!S.jars.length){
     root.append(el("p","empty","🐷 ยังไม่มีกระปุก"));
