@@ -950,7 +950,7 @@ function barChart(data,labels){
 function sumPanel(){
   const c=$("sum");c.innerHTML="";
   const cur=curC(),curY=cur.slice(0,4);
-  safe(()=>netWorth(c));
+  
   c.append(el("b",null,"📊 สรุปรายรับ-รายจ่าย"));
   const bt=el("div","tabs");bt.style.margin="10px 0 4px";
   for(const [k,t] of [["m","📅 รายเดือน"],["y","🗓️ รายปี"]]){
