@@ -2132,6 +2132,12 @@ function salary(){
   bStar.style.width="100%";
   g.append(bStar);
 
+  if(S.jars.filter(j=>!j.arch).length>1){
+  const tb=btn("v","🔁 โยกเงินข้ามกระปุก",transferDialog);
+  tb.style.cssText="width:100%;margin-top:10px";
+  g.append(tb);
+  }
+
   const pct=calcSplitPct();
   const info=el("div","sub");
   info.append(
