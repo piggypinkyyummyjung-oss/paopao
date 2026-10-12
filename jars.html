@@ -1088,6 +1088,7 @@ function sumPanel(){
   if(st.prem>0)info("จ่ายเบี้ยประกัน",st.prem);
   dt.append(ul);
   c.append(dt);
+  safe(()=>netWorth(c));
 }
 
 function recentPanel(){
