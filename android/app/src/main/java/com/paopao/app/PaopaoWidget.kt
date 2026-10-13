@@ -84,9 +84,17 @@ class PaopaoWidget : AppWidgetProvider() {
         fun optimistic(c: Context, out: Boolean, a: Double) {
             val j = widgetJson(c)
             val today = LocalDate.now().toString()
-            if (j.optString("d") != today) { j.put("left", j.optDouble("limit", 0.0)); j.put("spent", 0.0); j.put("d", today) }
-            if (out) { j.put("spent", j.optDouble("spent") + a); j.put("left", j.optDouble("left") - a) }
-            else j.put("left", j.optDouble("left") + a)
+            if (j.optString("d") != today) {
+                val av = j.optDouble("limit", 0.0)
+                j.put("left", av); j.put("avail", av); j.put("spent", 0.0); j.put("d", today)
+            }
+            if (out) {
+                j.put("spent", j.optDouble("spent") + a); j.put("left", j.optDouble("left") - a)
+                j.put("bal", j.optDouble("bal") - a)
+            } else {
+                j.put("left", j.optDouble("left") + a); j.put("avail", j.optDouble("avail") + a)
+                j.put("bal", j.optDouble("bal") + a)
+            }
             Store.put(c, "widget", j.toString())
         }
 
@@ -130,23 +138,25 @@ class PaopaoWidget : AppWidgetProvider() {
             rv.setOnClickPendingIntent(R.id.btn_in, PendingIntent.getActivity(c, 3,
                 Intent(c, AmountActivity::class.java).putExtra("kind", "in"), FL))
 
-            // 4) ยอดใช้ได้วันนี้ + สีเตือน
+            // 4) ยอดเงินรวม (ตัวใหญ่ เปลี่ยนสีตามการใช้ของวันนี้) + วันนี้เหลือใช้ = ...
             val has = j.has("left")
             val fresh = j.optString("d") == LocalDate.now().toString()
             val limit = j.optDouble("limit", 0.0)
+            val avail = if (fresh && j.has("avail")) j.optDouble("avail") else limit
             val left = if (fresh) j.optDouble("left") else limit
             val spent = if (fresh) j.optDouble("spent") else 0.0
-            val frac = if (limit > 0) spent / limit else if (spent > 0) 2.0 else 0.0
+            val frac = if (avail > 0) spent / avail else if (spent > 0) 2.0 else 0.0
             val col = when {
                 !has -> mute
                 left < 0 || frac >= 1.0 -> Color.parseColor("#E5484D")
                 frac >= WARN -> Color.parseColor("#F5A623")
                 else -> accent(j.optString("color"))
             }
-            rv.setTextViewText(R.id.left, if (has) fmt(left) + " ฿" else "เปิดแอปก่อน")
+            val noJar = !has && j.has("d")
+            rv.setTextViewText(R.id.left, if (has) fmt(j.optDouble("bal")) + " ฿" else if (noJar) "—" else "เปิดแอปก่อน")
             rv.setTextColor(R.id.left, col)
-            rv.setTextViewText(R.id.sub, if (has) "🐷 ใช้ได้อีกวันนี้ · ใช้ไป ${fmt(spent)} / งบวัน ${fmt(limit)} · รวม ${fmt(j.optDouble("bal"))}" else "")
-            rv.setTextColor(R.id.sub, mute)
+            rv.setTextViewText(R.id.sub, if (has) "วันนี้เหลือใช้ = ${fmt(left)} ฿" else if (noJar) "ยังไม่มีกระปุกรายรับ-รายจ่าย" else "")
+            rv.setTextColor(R.id.sub, ink)
             rv.setOnClickPendingIntent(R.id.left, PendingIntent.getActivity(c, 4, Intent(c, MainActivity::class.java), FL))
             rv.setOnClickPendingIntent(R.id.sub, PendingIntent.getActivity(c, 4, Intent(c, MainActivity::class.java), FL))
             return rv
