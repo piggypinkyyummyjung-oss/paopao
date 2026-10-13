@@ -1,46 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 3 แถวแบ่งความสูงด้วย weight → ยืดเต็มกรอบไม่ว่า launcher จะให้ความสูงเท่าไร (ไม่มีช่องว่างบน-ล่าง) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:gravity="center_vertical" android:padding="8dp"
+    android:orientation="vertical" android:padding="10dp"
     android:background="@drawable/widget_bg">
 
     <!-- 1) หมวด 3 อัน -->
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <TextView android:id="@+id/chip0" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1"
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="horizontal">
+        <TextView android:id="@+id/chip0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
             android:layout_marginEnd="3dp" android:background="@drawable/chip_cat" android:gravity="center"
-            android:maxLines="1" android:ellipsize="end" android:textSize="11sp" />
-        <TextView android:id="@+id/chip1" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1"
-            android:layout_marginStart="1.5dp" android:layout_marginEnd="1.5dp" android:background="@drawable/chip_cat" android:gravity="center"
-            android:maxLines="1" android:ellipsize="end" android:textSize="11sp" />
-        <TextView android:id="@+id/chip2" android:layout_width="0dp" android:layout_height="24dp" android:layout_weight="1"
+            android:maxLines="1" android:ellipsize="end" android:textSize="13sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chip1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:layout_marginStart="3dp" android:layout_marginEnd="3dp" android:background="@drawable/chip_cat" android:gravity="center"
+            android:maxLines="1" android:ellipsize="end" android:textSize="13sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chip2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
             android:layout_marginStart="3dp" android:background="@drawable/chip_cat" android:gravity="center"
-            android:maxLines="1" android:ellipsize="end" android:textSize="11sp" />
+            android:maxLines="1" android:ellipsize="end" android:textSize="13sp" android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 2) ช่องจำนวนเงิน + ปุ่ม − / + ในแถวเดียว -->
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/amt" android:layout_width="0dp" android:layout_height="30dp" android:layout_weight="1"
+    <!-- 2) ช่องจำนวนเงิน + ปุ่ม − / + -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1.1"
+        android:layout_marginTop="6dp" android:orientation="horizontal">
+        <TextView android:id="@+id/amt" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
             android:background="@drawable/chip_amt" android:gravity="center" android:maxLines="1"
-            android:textSize="13sp" android:text="฿ แตะกรอกจำนวนเงิน" />
-        <TextView android:id="@+id/btn_out" android:layout_width="wrap_content" android:layout_height="30dp"
-            android:layout_marginStart="5dp" android:minWidth="54dp" android:background="@drawable/chip_out" android:gravity="center"
-            android:paddingStart="10dp" android:paddingEnd="10dp" android:text="− ใช้" android:textSize="13sp"
+            android:textSize="15sp" android:text="฿ แตะใส่เงิน" />
+        <TextView android:id="@+id/btn_out" android:layout_width="wrap_content" android:layout_height="match_parent"
+            android:layout_marginStart="6dp" android:minWidth="64dp" android:background="@drawable/chip_out" android:gravity="center"
+            android:paddingStart="12dp" android:paddingEnd="12dp" android:text="− ใช้" android:textSize="15sp"
             android:textStyle="bold" android:textColor="#D6336C" />
-        <TextView android:id="@+id/btn_in" android:layout_width="wrap_content" android:layout_height="30dp"
-            android:layout_marginStart="5dp" android:minWidth="54dp" android:background="@drawable/chip_in" android:gravity="center"
-            android:paddingStart="10dp" android:paddingEnd="10dp" android:text="+ เติม" android:textSize="13sp"
+        <TextView android:id="@+id/btn_in" android:layout_width="wrap_content" android:layout_height="match_parent"
+            android:layout_marginStart="6dp" android:minWidth="64dp" android:background="@drawable/chip_in" android:gravity="center"
+            android:paddingStart="12dp" android:paddingEnd="12dp" android:text="+ เติม" android:textSize="15sp"
             android:textStyle="bold" android:textColor="#1B9E74" />
     </LinearLayout>
 
     <!-- 3) 🐷 ยอดเงินรวม (เปลี่ยนสี) · วันนี้เหลือใช้ -->
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1.1"
         android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical">
         <TextView android:id="@+id/pig" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginEnd="5dp" android:text="🐷" android:textSize="18sp" />
+            android:layout_marginStart="2dp" android:layout_marginEnd="6dp" android:text="🐷" android:textSize="24sp" />
         <TextView android:id="@+id/left" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-            android:maxLines="1" android:ellipsize="end" android:text="— ฿" android:textSize="20sp" android:textStyle="bold" />
+            android:maxLines="1" android:text="— ฿" android:textStyle="bold" android:textSize="26sp"
+            android:autoSizeTextType="uniform" android:autoSizeMinTextSize="14sp"
+            android:autoSizeMaxTextSize="26sp" android:autoSizeStepGranularity="1sp" />
         <TextView android:id="@+id/sub" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:maxWidth="130dp" android:gravity="end" android:maxLines="2" android:ellipsize="end" android:textSize="11sp" />
+            android:layout_marginStart="6dp" android:maxWidth="120dp" android:gravity="end" android:maxLines="2"
+            android:ellipsize="end" android:textSize="12sp" />
     </LinearLayout>
 </LinearLayout>
