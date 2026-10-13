@@ -18,7 +18,7 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * Widget: [หมวด x3] → [ช่องจำนวนเงิน] → [− ใช้][+ เติม] → ยอดใช้ได้วันนี้ (เปลี่ยนสีเมื่อใกล้/เกินงบ)
+ * Widget 4×2: ซ้าย = ยอดรวม + "วันนี้เหลือใช้" (เปลี่ยนสีเมื่อใกล้/เกินงบ) · ขวา = หมวด x3 + ช่องจำนวนเงิน + ปุ่ม − +
  * หมวด 3 อันตั้งเองในแอป (ตั้งค่า → จัดการรายรับ-รายจ่าย) · widget พิมพ์ตรง ๆ ไม่ได้ แตะช่องแล้วเด้งหน้าต่างกรอก
  */
 class PaopaoWidget : AppWidgetProvider() {
@@ -98,6 +98,16 @@ class PaopaoWidget : AppWidgetProvider() {
             Store.put(c, "widget", j.toString())
         }
 
+        private val ICONS = mapOf("อาหาร" to "🍜", "น้ำ" to "💧", "ช้อปปิ้ง" to "🛍️", "เดินทาง" to "🚌", "โทรศัพท์" to "📱",
+            "กาแฟ" to "☕", "ของใช้" to "🧴", "บันเทิง" to "🎮", "สุขภาพ" to "💊", "อื่นๆ" to "✨")
+
+        /** "ค่าอาหาร" → "🍜 อาหาร" (หมวดที่ตั้งเองไม่มีไอคอนก็แสดงแค่ชื่อ) */
+        fun chipLabel(name: String): String {
+            val s = name.removePrefix("ค่า").ifBlank { name }
+            val ic = ICONS[s]
+            return if (ic != null) "$ic $s" else s
+        }
+
         fun fmt(x: Double): String = NumberFormat.getIntegerInstance(Locale.US).format(Math.round(x))
 
         private fun accent(n: String) = Color.parseColor(
@@ -118,7 +128,7 @@ class PaopaoWidget : AppWidgetProvider() {
                 if (k >= wc.size) { rv.setViewVisibility(ids[k], View.GONE); continue }
                 val on = k == sel
                 rv.setViewVisibility(ids[k], View.VISIBLE)
-                rv.setTextViewText(ids[k], wc[k])
+                rv.setTextViewText(ids[k], chipLabel(wc[k]))
                 rv.setInt(ids[k], "setBackgroundResource", if (on) R.drawable.chip_on else R.drawable.chip_cat)
                 rv.setTextColor(ids[k], if (on) Color.WHITE else Color.parseColor("#7A5AE0"))
                 rv.setOnClickPendingIntent(ids[k], PendingIntent.getBroadcast(c, 10 + k,
@@ -128,7 +138,7 @@ class PaopaoWidget : AppWidgetProvider() {
             // 2) ช่องจำนวนเงิน
             val a = amt(c)
             rv.setInt(R.id.amt, "setBackgroundResource", if (dark) R.drawable.chip_amt_dark else R.drawable.chip_amt)
-            rv.setTextViewText(R.id.amt, if (a > 0) "฿ " + fmt(a) else "฿  แตะเพื่อกรอกจำนวนเงิน")
+            rv.setTextViewText(R.id.amt, if (a > 0) "฿ " + fmt(a) else "฿ แตะใส่เงิน")
             rv.setTextColor(R.id.amt, if (a > 0) ink else mute)
             rv.setOnClickPendingIntent(R.id.amt, PendingIntent.getActivity(c, 1, Intent(c, AmountActivity::class.java), FL))
 
