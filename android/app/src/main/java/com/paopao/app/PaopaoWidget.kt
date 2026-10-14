@@ -6,10 +6,13 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import android.widget.Toast
+import androidx.core.graphics.ColorUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
@@ -57,14 +60,18 @@ class PaopaoWidget : AppWidgetProvider() {
             return if (l.contains("อื่นๆ")) "อื่นๆ" else l.firstOrNull() ?: "อื่นๆ"
         }
 
+        /** หมวดรับที่เลือกไว้ในแอป (≤3) ถ้าไม่มีใช้หมวดเดียวตามค่าเริ่มต้น */
+        fun incomeCats(c: Context): List<String> =
+            strs(widgetJson(c).optJSONArray("win")).ifEmpty { listOf(incomeCat(c)) }.take(3)
+
         fun amt(c: Context): Double = Store.get(c, "wamt", "0")?.toDoubleOrNull() ?: 0.0
         fun setAmt(c: Context, v: Double) { Store.put(c, "wamt", v.toString()); updateAll(c) }
 
         /** บันทึกรายการจากยอดที่กรอกไว้ + หมวดที่เลือก */
-        fun apply(c: Context, income: Boolean) {
+        fun apply(c: Context, income: Boolean, catPick: String? = null) {
             val a = amt(c)
             if (a <= 0) return
-            val cat = if (income) incomeCat(c) else selCat(c)
+            val cat = catPick ?: if (income) incomeCats(c).first() else selCat(c)
             val o = JSONObject().put("id", UUID.randomUUID().toString()).put("a", a)
                 .put("kind", if (income) "in" else "out").put("c", cat).put("d", LocalDate.now().toString())
             Store.addPending(c, o)
@@ -108,6 +115,13 @@ class PaopaoWidget : AppWidgetProvider() {
             return if (ic != null) "$ic $s" else s
         }
 
+        private fun mixc(a: Int, b: Int, t: Float) = ColorUtils.blendARGB(a, b, t)
+
+        /** ย้อมสีพื้นหลังของ view (Android 12+ เท่านั้น เครื่องเก่าใช้สีม่วงเดิม) */
+        private fun tint(rv: RemoteViews, id: Int, color: Int) {
+            if (Build.VERSION.SDK_INT >= 31) rv.setColorStateList(id, "setBackgroundTintList", ColorStateList.valueOf(color))
+        }
+
         fun fmt(x: Double): String = NumberFormat.getIntegerInstance(Locale.US).format(Math.round(x))
 
         private fun accent(n: String) = Color.parseColor(
@@ -121,6 +135,18 @@ class PaopaoWidget : AppWidgetProvider() {
             val mute = if (dark) Color.parseColor("#B0AEC0") else Color.parseColor("#8E8A99")
             rv.setInt(R.id.root, "setBackgroundResource", if (dark) R.drawable.widget_bg_dark else R.drawable.widget_bg)
 
+            // สี widget: ม่วง = หน้าตาเดิม (ไล่สีชมพู-ม่วง) · สีอื่น = ย้อมพื้นหลัง/ปุ่มหมวดตามสีที่เลือก
+            val cname = j.optString("color", "purple")
+            val acc = accent(cname)
+            val custom = Build.VERSION.SDK_INT >= 31 && cname != "purple"
+            val base = if (dark) 0xFF1E1E2A.toInt() else Color.WHITE
+            val chipText = when {
+                !custom -> Color.parseColor("#7A5AE0")
+                dark -> mixc(acc, Color.WHITE, 0.5f)
+                else -> mixc(acc, Color.BLACK, 0.4f)
+            }
+            if (custom) tint(rv, R.id.root, mixc(acc, base, if (dark) 0.82f else 0.90f))
+
             // 1) หมวด
             val wc = wcats(c); val sel = selIdx(c)
             val ids = intArrayOf(R.id.chip0, R.id.chip1, R.id.chip2)
@@ -130,7 +156,8 @@ class PaopaoWidget : AppWidgetProvider() {
                 rv.setViewVisibility(ids[k], View.VISIBLE)
                 rv.setTextViewText(ids[k], chipLabel(wc[k]))
                 rv.setInt(ids[k], "setBackgroundResource", if (on) R.drawable.chip_on else R.drawable.chip_cat)
-                rv.setTextColor(ids[k], if (on) Color.WHITE else Color.parseColor("#7A5AE0"))
+                if (custom) tint(rv, ids[k], if (on) acc else mixc(acc, base, if (dark) 0.65f else 0.78f))
+                rv.setTextColor(ids[k], if (on) Color.WHITE else chipText)
                 rv.setOnClickPendingIntent(ids[k], PendingIntent.getBroadcast(c, 10 + k,
                     Intent(c, PaopaoWidget::class.java).setAction(ACT_SEL).putExtra("i", k), FL))
             }
@@ -138,6 +165,7 @@ class PaopaoWidget : AppWidgetProvider() {
             // 2) ช่องจำนวนเงิน
             val a = amt(c)
             rv.setInt(R.id.amt, "setBackgroundResource", if (dark) R.drawable.chip_amt_dark else R.drawable.chip_amt)
+            if (custom) tint(rv, R.id.amt, mixc(acc, if (dark) 0xFF2A2A3A.toInt() else Color.WHITE, if (dark) 0.85f else 0.94f))
             rv.setTextViewText(R.id.amt, if (a > 0) "฿ " + fmt(a) else "฿ แตะใส่เงิน")
             rv.setTextColor(R.id.amt, if (a > 0) ink else mute)
             rv.setOnClickPendingIntent(R.id.amt, PendingIntent.getActivity(c, 1, Intent(c, AmountActivity::class.java), FL))
