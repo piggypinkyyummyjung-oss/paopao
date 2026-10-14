@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
         web = WebView(this)
         setContentView(web)
         ref = WeakReference(web)
-        WebView.setWebContentsDebuggingEnabled(true)
+        WebView.setWebContentsDebuggingEnabled((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0)
         web.settings.apply { javaScriptEnabled = true; domStorageEnabled = true; allowFileAccess = true }
         web.addJavascriptInterface(Bridge(this), "Android")
         web.webChromeClient = object : WebChromeClient() {
