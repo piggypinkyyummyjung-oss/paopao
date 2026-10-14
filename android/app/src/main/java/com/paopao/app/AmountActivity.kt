@@ -16,7 +16,10 @@ class AmountActivity : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         val kind = intent.getStringExtra("kind")
-        if (kind != null && PaopaoWidget.amt(this) > 0) {
+        // กดรับเข้าและตั้งหมวดรับไว้หลายหมวด → ต้องเลือกหมวดก่อน จึงเปิดหน้าต่างเสมอ
+        val inc = if (kind == "in") PaopaoWidget.incomeCats(this) else emptyList()
+        val needPick = inc.size > 1
+        if (kind != null && PaopaoWidget.amt(this) > 0 && !needPick) {
             PaopaoWidget.apply(this, kind == "in")
             finish(); overridePendingTransition(0, 0); return
         }
@@ -26,6 +29,10 @@ class AmountActivity : Activity() {
             text = when (kind) { "in" -> "💵 รับเข้า"; "out" -> "💸 ใช้จ่าย · " + PaopaoWidget.selCat(this@AmountActivity); else -> "ใส่จำนวนเงิน" }
             textSize = 18f
         })
+        val spinner = if (needPick) Spinner(this).apply {
+            adapter = ArrayAdapter(this@AmountActivity, android.R.layout.simple_spinner_dropdown_item, inc)
+        } else null
+        spinner?.let { root.addView(it) }
         val et = EditText(this).apply {
             hint = "จำนวนเงิน (บาท)"
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
@@ -47,7 +54,7 @@ class AmountActivity : Activity() {
                 val v = et.text.toString().replace(",", "").toDoubleOrNull()
                 if (v == null || v <= 0) { et.error = "ใส่จำนวนเงิน"; return@setOnClickListener }
                 PaopaoWidget.setAmt(this@AmountActivity, v)
-                if (kind != null) PaopaoWidget.apply(this@AmountActivity, kind == "in")
+                if (kind != null) PaopaoWidget.apply(this@AmountActivity, kind == "in", spinner?.selectedItem?.toString())
                 finish()
             }
         })
