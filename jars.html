@@ -338,7 +338,7 @@ function defNotif(){
 
 function okR(v){return typeof v==="number"&&v>=0&&v<=100}
 function okDate(s){
-  if(typeof s!=="string"||!/^\d{4}-\d{2}-\d{2}/.test(s))return false;
+  if(typeof s!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
   const y=+s.slice(0,4),m=+s.slice(5,7),d=+s.slice(8,10),t=new Date(y,m-1,d);
   return t.getFullYear()===y&&t.getMonth()===m-1&&t.getDate()===d;
 }
@@ -2057,6 +2057,30 @@ function monthSelector(w){
   r.style.justifyContent="center";w.append(r);
 }
 
+function confirmBox(title,lines,okText,cb){
+  const dlg=document.createElement("dialog");
+  dlg.append(el("h3",null,title));
+  for(const l of lines)dlg.append(el("p",null,l));
+  const bt=el("div","btns");
+  bt.append(btn("v","ยกเลิก",()=>dlg.close()),btn("p",okText,()=>{dlg.close();cb()}));
+  dlg.append(bt);document.body.append(dlg);dlg.showModal();
+  dlg.addEventListener("close",()=>dlg.remove());
+}
+function splitNow(){
+  if(!(S.salary>0)){toast("ใส่เงินเดือนก่อน");return}
+  const ym=selYM(),now=S.salary+(S.extra||0);
+  const run=()=>{
+    const n=doSplit(ym);
+    done();
+    toast(n<0?"แบ่งเงินเดือนล่วงหน้าไม่ได้":n>0?("แบ่งแล้ว "+n+" รายการ · "+ymToTH(ym)):"ไม่มีรายการให้แบ่ง");
+  };
+  if(ym>=curC()){run();return}
+  const snap=(S.mon||{})[ym],lines=["แบ่งรอบเก่าจะใช้เงินเดือนและการตั้งค่าปัจจุบัน (รายรับ "+fmt(now)+" ฿ ต่อรอบ) ไม่ใช่ตัวเลขของรอบนั้น แอปไม่ได้เก็บประวัติการตั้งค่าย้อนหลัง"];
+  if(snap&&snap.inc!=null&&Math.abs(snap.inc-now)>0.5)lines.push("รอบนั้นเคยบันทึกรายรับไว้ "+fmt(snap.inc)+" ฿ ซึ่งต่างจากปัจจุบัน");
+  lines.push("ควรสำรองข้อมูลก่อน (ตั้งค่า → สำรองข้อมูล) เพราะแบ่งแล้วเลิกทำไม่ได้");
+  confirmBox("แบ่งเงินรอบ "+ymToTH(ym)+"?",lines,"แบ่งเลย",run);
+}
+
 function salary(){
   const c=$("sal");c.innerHTML="";
   const g=el("div","grid");
@@ -2114,13 +2138,7 @@ function salary(){
   bSave.style.width="100%";
   g.append(bSave);
 
-  const bAuto=btn("v","🔁 แบ่งเงินอัตโนมัติ",()=>{
-    if(!(S.salary>0)){toast("ใส่เงินเดือนก่อน");return}
-    const ym=selYM();
-    const n=doSplit(ym);
-    done();
-    toast(n<0?"แบ่งเงินเดือนล่วงหน้าไม่ได้":n>0?("แบ่งแล้ว "+n+" รายการ · "+ymToTH(ym)):"ไม่มีรายการให้แบ่ง");
-  });
+  const bAuto=btn("v","🔁 แบ่งเงินอัตโนมัติ",splitNow);
   bAuto.style.width="100%";
   g.append(bAuto);
 
@@ -2128,13 +2146,7 @@ function salary(){
 
   planPanel(g);
 
-  const bStar=btn("p","⭐ แบ่งตอนนี้ (หักทุกกระปุก)",()=>{
-    if(!(S.salary>0)){toast("ใส่เงินเดือนก่อน");return}
-    const ym=selYM();
-    const n=doSplit(ym);
-    done();
-    toast(n<0?"แบ่งเงินเดือนล่วงหน้าไม่ได้":n>0?("แบ่งแล้ว "+n+" รายการ · "+ymToTH(ym)):"ไม่มีรายการให้แบ่ง");
-  });
+  const bStar=btn("p","⭐ แบ่งตอนนี้ (หักทุกกระปุก)",splitNow);
   bStar.style.width="100%";
   g.append(bStar);
 
@@ -2464,7 +2476,7 @@ function jarBars(j){
   box.append(el("div","sub",isD?(d<0?"🌷 หนี้ลดลง "+fmt(-d)+" ฿ ใน 6 รอบ":"รอบนี้ยังไม่ลด ค่อย ๆ ไปนะ 💪"):(d>0?"🌱 เก็บเพิ่ม "+fmt(d)+" ฿ ใน 6 รอบ":"ยังไม่เพิ่ม เริ่มรอบนี้ได้เลย ✨")));
   return box;
 }
-function netAt(ym){let as=0,db=0;for(const j of S.jars){const v=(ym===curC()&&j.type==="k")?bal(j):balAt(j,ym);if(j.type==="debt")db+=v;else if(["d","f","k","c","g","o","emg"].includes(j.type))as+=v}return{as,db,net:as-db}}
+function netAt(ym){let as=0,db=0;for(const j of S.jars){const v=(ym===curC()&&j.type==="k")?bal(j):balAt(j,ym);if(j.type==="debt")db+=v;else if(["d","f","k","c","i","g","o","emg"].includes(j.type))as+=v}return{as,db,net:as-db}}
 function netWorth(c){
   const ms=cycles(6),rows=ms.map(netAt),now=rows[5],box=el("div","card");
   box.style.marginTop="10px";
