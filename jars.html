@@ -236,6 +236,10 @@
     dialog{width:100%!important;max-width:100%!important;margin:auto 0 0 0;border-radius:26px 26px 0 0;max-height:92vh;overflow:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
     dialog[open]{animation:sheetUp .3s cubic-bezier(.2,.9,.3,1)}
   }
+  .wrow{display:grid;grid-template-columns:auto auto 1fr;gap:8px;align-items:center;margin:2px 0}
+  .wrow input[type=checkbox]{width:auto;margin:0}
+  .wrow span{font-size:13px;white-space:nowrap}
+  .wrow select{margin:0}
 </style>
 </head>
 <body>
@@ -630,7 +634,7 @@ addEventListener("error",e=>report(e.error||e.message));
 addEventListener("unhandledrejection",e=>report(e.reason));
 document.addEventListener("input",e=>{if(e.target.classList)e.target.classList.remove("err")});
 
-let EDIT=null,UNDO=null,RCO=0,CFO=false,IMPD=null,_ut=null,LASTAL="",PREVO=null,LOCKED=false,HIDT=0,RF="all",JOPEN=false,COPEN=false,NOPEN=false,BOPEN=false,SECOPEN=false,SYSOPEN=false,WOPEN=false,THEMEOPEN=false,PLO=false,ARO=false,TAB=1;
+let EDIT=null,UNDO=null,RCO=0,CFO=false,IMPD=null,_ut=null,LASTAL="",PREVO=null,LOCKED=false,HIDT=0,RF="all",JOPEN=false,COPEN=false,NOPEN=false,BOPEN=false,SECOPEN=false,SYSOPEN=false,WOPEN=false,THEMEOPEN=false,PLO=false,ARO=false,TAB=1,WGOPEN=false;
 
 const catsOut=()=>Array.isArray(S.cats)&&S.cats.length?S.cats:CATS_OUT;
 const catsIn=()=>Array.isArray(S.catsIn)&&S.catsIn.length?S.catsIn:CATS_IN;
@@ -1244,19 +1248,6 @@ function syncAlerts(){
     S.cats=[...list,v];CFO=true;done();
   }));
   g.append(box);
-  g.append(el("label",null,"หมวดที่แสดงบน widget (เลือกได้ไม่เกิน 3)"));
-  const wb=el("div","set"),wsel=Array.isArray(S.wcats)?S.wcats:[];
-  for(const k of list){
-    const l=el("label","chk"),ck=el("input");ck.type="checkbox";ck.checked=wsel.includes(k);
-    ck.onchange=()=>{
-      let a=(S.wcats||[]).filter(x=>catsOut().includes(x));
-      if(ck.checked){if(a.length>=3){ck.checked=false;toast("เลือกได้ไม่เกิน 3 หมวด");return}a.push(k)}
-      else a=a.filter(x=>x!==k);
-      S.wcats=a;store();safe(syncWidget);
-    };
-    l.append(ck,k);wb.append(l);
-  }
-  g.append(wb);
 
   g.append(el("label",null,"หมวดรายรับ"));
   const box2=el("div","set");
@@ -1303,6 +1294,7 @@ function confirmDelCat(name,kind){
 }
 
 function renameCatOut(a,b){
+  if(S.wslots&&S.wslots.out)S.wslots.out.forEach(x=>{if(x.cat===a)x.cat=b});
   S.cats=catsOut().map(x=>x===a?b:x);
   for(const j of S.jars){
     for(const t of j.tx)if(t.c===a)t.c=b;
@@ -1315,6 +1307,7 @@ function renameCatOut(a,b){
 }
 
 function renameCatIn(a,b){
+  if(S.wslots&&S.wslots.in)S.wslots.in.forEach(x=>{if(x.cat===a)x.cat=b});
   S.catsIn=catsIn().map(x=>x===a?b:x);
   for(const j of S.jars){
     for(const t of j.tx)if(t.c===a)t.c=b;
@@ -1529,6 +1522,7 @@ function cfgPanel(){
 
   notifPanel(g);
   themePanel(g);
+  widgetPanel(g);
 
   {
     const d=el("details");d.open=BOPEN;
@@ -2643,6 +2637,87 @@ function historyDialog(){
   document.body.append(dlg);dlg.showModal();
   dlg.addEventListener("close",()=>dlg.remove());
 }
+function catIcon(n){
+  const t=String(n);
+  return /อาหาร|กิน/.test(t)?"🍜":/เดินทาง|รถ|น้ำมัน/.test(t)?"🚌":/น้ำ/.test(t)?"💧":/ช้อป/.test(t)?"🛍️":/โทร/.test(t)?"📱":/ไฟ/.test(t)?"💡":/เงินเดือน/.test(t)?"💵":/โบนัส/.test(t)?"🎁":/ขายของ/.test(t)?"🛒":/ดอกเบี้ย/.test(t)?"🏦":/อื่น/.test(t)?"✨":"🏷️";
+}
+function wcol(){return S.wcolor&&S.wcolor!=="app"?S.wcolor:(S.color||"purple")}
+function wslots(){
+  const W=S.wslots=S.wslots||{};
+  if(!Array.isArray(W.out)){
+    const base=(Array.isArray(S.wcats)&&S.wcats.length?S.wcats:catsOut()).filter(k=>catsOut().includes(k)).slice(0,3);
+    W.out=[0,1,2].map(i=>({on:!!base[i],cat:base[i]||""}));
+  }
+  if(!Array.isArray(W.in)){const f=catsIn()[0]||"";W.in=[{on:!!f,cat:f},{on:false,cat:""},{on:false,cat:""}]}
+  for(const k of ["out","in"]){
+    W[k]=W[k].slice(0,3);
+    while(W[k].length<3)W[k].push({on:false,cat:""});
+    W[k]=W[k].map(x=>x&&typeof x==="object"?x:{on:false,cat:""});
+    W[k].forEach(x=>{if(typeof x.cat!=="string")x.cat="";x.on=!!(x.on&&x.cat)}); // แก้ในที่เดิม (ไม่สร้างออบเจกต์ใหม่) เพื่อให้ตัวควบคุมในหน้าตั้งค่ายังชี้ถูกตัว
+  }
+  return W;
+}
+function wlist(kind){
+  const all=kind==="out"?catsOut():catsIn(),seen=[];
+  for(const x of wslots()[kind])if(x.on&&all.includes(x.cat)&&!seen.includes(x.cat))seen.push(x.cat);
+  return seen;
+}
+function widgetPanel(g){
+  const d=el("details");d.open=WGOPEN;
+  d.addEventListener("toggle",()=>{WGOPEN=d.open});
+  d.append(el("summary",null,"📱 วิดเจ็ตหน้าจอโฮม"));
+  const w=el("div","set"),W=wslots();
+  const push=()=>{store();safe(syncWidget)};
+  const group=(kind,label,all)=>{
+    W[kind].forEach((slot,i)=>{
+      const row=el("div","wrow"),ck=el("input"),sel=el("select");
+      ck.type="checkbox";ck.checked=slot.on;
+      const o0=el("option",null,"—");o0.value="";sel.append(o0);
+      for(const k of all){const o=el("option",null,catIcon(k)+" "+k);o.value=k;sel.append(o)}
+      sel.value=all.includes(slot.cat)?slot.cat:"";
+      const taken=v=>W[kind].some((x,j)=>j!==i&&x.on&&x.cat===v);
+      ck.onchange=()=>{
+        if(ck.checked){
+          if(!sel.value){
+            const free=all.find(k=>!taken(k));
+            if(!free){ck.checked=false;toast("ไม่มีหมวดว่างให้เลือก");return}
+            sel.value=free;slot.cat=free;
+          }else if(taken(sel.value)){ck.checked=false;toast("เลือกหมวดซ้ำไม่ได้");return}
+          slot.on=true;
+        }else slot.on=false;
+        push();
+      };
+      sel.onchange=()=>{
+        if(sel.value&&taken(sel.value)){sel.value=slot.cat||"";toast("เลือกหมวดซ้ำไม่ได้");return}
+        slot.cat=sel.value;slot.on=!!sel.value;ck.checked=slot.on;push();
+      };
+      row.append(ck,el("span",null,label+" "+(i+1)+":"),sel);
+      w.append(row);
+    });
+  };
+  group("out","หมวดจ่าย",catsOut());
+  group("in","หมวดรับ",catsIn());
+  const note=el("div","sub","* เลือกได้ 3 ช่อง · หมวดจ่ายขึ้นเป็นปุ่มบน widget · หมวดรับ ถ้าเลือกมากกว่า 1 จะให้เลือกตอนกด + เติม");
+  note.style.cssText="display:block;line-height:1.6";w.append(note);
+  w.append(el("label",null,"🎨 สี Widget"));
+  const follow=!S.wcolor||S.wcolor==="app";
+  const fl=el("label","chk"),fc=el("input");fc.type="checkbox";fc.checked=follow;
+  fc.onchange=()=>{
+    S.wcolor=fc.checked?"app":(S.color&&S.color!=="random"?S.color:"purple");
+    push();safe(cfgPanel);
+  };
+  fl.append(fc,"ใช้สีเดียวกับแอป");w.append(fl);
+  const sw=el("div");sw.style.cssText="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px";
+  for(const [v,c] of [["blue","#5BB8F5"],["green","#3FCFA0"],["orange","#FF9A76"],["red","#FF7FB0"],["gold","#F5B93F"],["purple","#A07CFF"]]){
+    const b=el("button",null,"");b.type="button";
+    b.setAttribute("aria-label","สี "+v);
+    b.style.cssText="width:36px;height:36px;border-radius:50%;border:3px solid "+(!follow&&S.wcolor===v?"var(--ink)":"transparent")+";background:"+c+";cursor:pointer;"+(follow?"opacity:.5":"");
+    b.onclick=()=>{S.wcolor=v;push();safe(cfgPanel)};
+    sw.append(b);
+  }
+  w.append(sw);
+  d.append(w);g.append(d);
+}
 /* ---- animation helpers ---- */
 const NUMS={};
 function countUp(e,id,to){
@@ -2662,13 +2737,13 @@ function sparkle(g){
 let LASTW="";
 function widgetData(){
   const dj=S.jars.find(j=>j.type==="d");
-  if(!dj)return{v:1,d:td(),cats:catsOut(),catsIn:catsIn(),wcats:catsOut().slice(0,3),color:S.color||"purple",dark:document.body.classList.contains("dark")};
+  if(!dj)return{v:1,d:td(),cats:catsOut(),catsIn:catsIn(),wcats:catsOut().slice(0,3),color:wcol(),dark:document.body.classList.contains("dark")};
   const t0=td(),L=cm(dj).filter(t=>!isSys(t));
   const net=L.filter(t=>t.d===t0).reduce((x,t)=>x+t.a,0);
   const spent=-L.filter(t=>t.d===t0&&t.a<0).reduce((x,t)=>x+t.a,0);
   const dl=Math.max(1,dd(t0,dj.end||eom())+1),b=bal(dj),lim=(b-net)/dl,cats={};
   for(const t of L)if(t.a<0&&t.c)cats[t.c]=r2((cats[t.c]||0)-t.a);
-  return {v:1,d:t0,spent:r2(spent),left:r2(lim+net),limit:r2(lim),avail:r2(lim+net+spent),days:dl,bal:r2(b),cats:catsOut(),catsIn:catsIn(),wcats:((Array.isArray(S.wcats)?S.wcats:[]).filter(k=>catsOut().includes(k)).length?S.wcats.filter(k=>catsOut().includes(k)):catsOut()).slice(0,3),catSpent:cats,catBudget:dj.cb||{},color:S.color||"purple",dark:document.body.classList.contains("dark")};
+  return {v:1,d:t0,spent:r2(spent),left:r2(lim+net),limit:r2(lim),avail:r2(lim+net+spent),days:dl,bal:r2(b),cats:catsOut(),catsIn:catsIn(),wcats:wlist("out").length?wlist("out"):catsOut().slice(0,3),win:wlist("in").length?wlist("in"):catsIn().slice(0,1),catSpent:cats,catBudget:dj.cb||{},color:wcol(),dark:document.body.classList.contains("dark")};
 }
 function syncWidget(){
   if(!window.Android||!Android.setWidget)return;
