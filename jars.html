@@ -337,6 +337,11 @@ function defNotif(){
 }
 
 function okR(v){return typeof v==="number"&&v>=0&&v<=100}
+function okDate(s){
+  if(typeof s!=="string"||!/^\d{4}-\d{2}-\d{2}/.test(s))return false;
+  const y=+s.slice(0,4),m=+s.slice(5,7),d=+s.slice(8,10),t=new Date(y,m-1,d);
+  return t.getFullYear()===y&&t.getMonth()===m-1&&t.getDate()===d;
+}
 function clean(){
   const f=x=>Number.isFinite(+x)?+x:0;
   S.salary=f(S.salary);
@@ -370,7 +375,7 @@ function clean(){
     }
     if(j.type==="emg"&&typeof j.min!=="number")j.min=0;
     if(j.type==="debt"&&typeof j.orig!=="number")j.orig=0;
-    j.tx=(Array.isArray(j.tx)?j.tx:[]).filter(t=>t&&Number.isFinite(+t.a)&&typeof t.d==="string"&&/^\d{4}-\d{2}-\d{2}/.test(t.d)).map(t=>{t.a=+t.a;return t});
+    j.tx=(Array.isArray(j.tx)?j.tx:[]).filter(t=>t&&Number.isFinite(+t.a)&&okDate(t.d)).map(t=>{t.a=+t.a;return t});
   }
 }
 
@@ -765,7 +770,8 @@ function sumDcaAll(){
 
 function saveMonthSplit(ym){
   if(!S.mon)S.mon={};
-  S.mon[ym]=Object.assign(S.mon[ym]||{},{pvd:calcPvdTotal()});
+  const m=S.mon[ym]=Object.assign(S.mon[ym]||{},{pvd:calcPvdTotal()});
+  if(m.inc==null){m.inc=S.salary+(S.extra||0);m.ded=S.deduct||0}
 }
 
 function doSplit(ym){
@@ -810,8 +816,8 @@ function doSplit(ym){
     if(m>0)x.tx.push({id:Date.now()+Math.random()+7,a:m,d:dT,n:"แบ่งเงินเดือน",split:ym});
   }
   const total=dj.rest?0:S.salary+(S.extra||0)-(S.deduct||0)-calcSplitTotal()+calcPvdEmployer();
+  if(!dj.rest)dj.tx=dj.tx.filter(t=>cyc(t.d)!==ym||t.n!=="ส่วนที่เหลือจากเงินเดือน");
   if(total>0){
-    dj.tx=dj.tx.filter(t=>cyc(t.d)!==ym||t.n!=="ส่วนที่เหลือจากเงินเดือน");
     const d=cs(ym);
     const d2=d>t0?t0:d;
     dj.tx.push({id:Date.now()+Math.random()+6,a:total,d:d2,n:"ส่วนที่เหลือจากเงินเดือน",split:ym});
@@ -872,7 +878,7 @@ function postAcc(j){
     const ks=j.type==="f"?[["p",j.prate],["s",j.srate]]:[["",j.type==="g"?(j.ir||0):j.rate]];
     for(const [k,r] of ks){
       if(!(r>0)||(j.type==="k"&&j.price>0&&units(j)>0))continue;
-      const a=Math.round((k?bk(j,k):agg(j).sum)*r/1200*100)/100;
+      const base=j.tx.reduce((x,t)=>x+((t.d<dt&&(!k||t.k===k))?t.a:0),0),a=Math.round(Math.max(0,base)*r/1200*100)/100;
       if(a>0){const t={id:Date.now()+Math.random(),a,d:dt,n:"ผลตอบแทน",adj:1};if(k)t.k=k;j.tx.push(t)}
     }
   }
@@ -1756,7 +1762,7 @@ function checkImport(d){
     if(!j||typeof j!=="object"||j.id==null||typeof j.type!=="string"){bj++;continue}
     ok++;
     for(const t of (Array.isArray(j.tx)?j.tx:[]))
-      if(!t||!Number.isFinite(+t.a)||typeof t.d!=="string"||!/^\d{4}-\d{2}-\d{2}/.test(t.d))bt++;
+      if(!t||!Number.isFinite(+t.a)||!okDate(t.d))bt++;
   }
   if(!ok)return{err:"ไฟล์สำรองไม่มีกระปุกที่อ่านได้"};
   if(d.salary!=null&&!Number.isFinite(+d.salary))return{err:"ไฟล์สำรองมีเงินเดือนผิดรูปแบบ"};
@@ -2754,20 +2760,23 @@ function syncWidget(){
 window.__widgetData=()=>JSON.stringify(widgetData());
 function drainPending(){
   if(!window.Android||!Android.takePending)return;
-  let a;try{a=JSON.parse(Android.takePending()||"[]")}catch(e){return}
   const dj=S.jars.find(j=>j.type==="d");
-  if(!Array.isArray(a)||!a.length||!dj)return;
+  if(!dj)return;
+  let a;try{a=JSON.parse(Android.takePending()||"[]")}catch(e){return}
+  if(!Array.isArray(a)||!a.length)return;
   S.wid=S.wid||[];let n=0;
   for(const p of a){
-    const x=Math.abs(+p.a);
-    if(!(x>0)||(p.id&&S.wid.includes(p.id)))continue;
-    let d=typeof p.d==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(p.d)?p.d:td();if(d>td())d=td();
-    const t={id:Date.now()+Math.random(),a:p.kind==="in"?x:-x,d};
-    if(p.c)t.c=String(p.c);if(p.n)t.n=String(p.n);
-    dj.tx.push(t);if(p.id)S.wid.push(p.id);n++;
+    try{
+      const x=Math.abs(+p.a);
+      if(!(x>0)||(p.id&&S.wid.includes(p.id)))continue;
+      let d=okDate(p.d)?p.d.slice(0,10):td();if(d>td())d=td();
+      const t={id:Date.now()+Math.random(),a:p.kind==="in"?x:-x,d};
+      if(p.c)t.c=String(p.c);if(p.n)t.n=String(p.n);
+      dj.tx.push(t);if(p.id)S.wid.push(p.id);n++;
+    }catch(e){report(e)}
   }
   S.wid=S.wid.slice(-100);
-  if(n){touch(dj);done();toast("รับ "+n+" รายการจาก widget")}
+  if(n){touch(dj);done();flush();toast("รับ "+n+" รายการจาก widget")}
 }
 window.__drain=drainPending;
 
